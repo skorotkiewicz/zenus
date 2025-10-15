@@ -117,10 +117,10 @@ function App() {
   const renderBlockAsLines = (block: NoteBlock) => {
     const lines = block.content.split("\n");
     // When collapsed, show only 1 line. When expanded, show actual content length with minimum of 5
-    const lineCount = block.isCollapsed ? 1 : Math.max(lines.length, 5);
+    const lineCount = block.isCollapsed ? 1 : lines.length;
 
     return (
-      <div class="bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+      <div class="bg-white dark:bg-gray-900 overflow-hidden">
         <div class="flex">
           {/* Line Numbers */}
           <div class="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 py-2 text-right text-sm text-gray-500 dark:text-gray-400 font-mono border-r border-gray-300 dark:border-gray-600 min-w-[50px]">
@@ -186,12 +186,12 @@ function App() {
                       const target = e.target as HTMLTextAreaElement;
                       await updateBlockContent(block.id, target.value);
                     }}
-                    placeholder="   Linia 2: po kliknieciu na zwiń block, nie bedzie widać tego tekstu.&#10;Linia 3: ani tego&#10;Linia 4: [rozwin block btn] -------- a tutaj mam zawiniete -------- [preview btn] [remove btn]"
+                    placeholder="Main block content..."
                     style={{
                       lineHeight: "20px",
                       fontFamily:
                         'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                      height: `${Math.max(lines.length, 5) * 20}px`,
+                      height: `${lines.length * 20}px`,
                     }}
                   />
                 </div>
@@ -240,10 +240,12 @@ function App() {
             </Button>
           </div>
         ) : (
-          <div class="p-6 space-y-4">
-            {blocks.map((block) => (
-              <div key={block.id}>{renderBlockAsLines(block)}</div>
-            ))}
+          <div class="p-6">
+            <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden divide-y divide-gray-300 dark:divide-gray-600">
+              {blocks.map((block) => (
+                <div key={block.id}>{renderBlockAsLines(block)}</div>
+              ))}
+            </div>
           </div>
         )}
       </div>
