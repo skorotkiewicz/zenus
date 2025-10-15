@@ -1,0 +1,18 @@
+{
+  "rules": [
+    "Never run 'bun run dev' or 'npm run dev' or 'yarn dev' automatically",
+    "Never start development servers without explicit user permission",
+    "Always ask before running long-running processes",
+    "Focus on code changes and file modifications only"
+  ],
+  "disabledCommands": ["bun run dev", "npm run dev", "yarn dev"],
+  "dev-rules": {
+    "neverRun": ["bun run dev", "npm run dev", "yarn dev"],
+    "alwaysAsk": ["long-running processes", "development servers"],
+    "workflow": [
+      "User will start development servers manually when needed",
+      "Focus on code changes and file modifications only",
+      "Always ask before running terminal commands that might be long-running"
+    ]
+  }
+}
