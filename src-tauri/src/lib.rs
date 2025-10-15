@@ -6,8 +6,8 @@ struct NoteBlock {
     id: String,
     title: String,
     content: String,
-    #[serde(rename = "isPreviewMode")]
-    is_preview_mode: bool,
+    #[serde(rename = "isCollapsed")]
+    is_collapsed: bool,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -49,6 +49,17 @@ fn delete_block(notes: Vec<NoteBlock>, block_id: String) -> Result<Vec<NoteBlock
     let filtered_notes: Vec<NoteBlock> = notes.into_iter()
         .filter(|note| note.id != block_id)
         .collect();
+    
+    // Save the updated notes to file
+    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+    let notes_dir = app_dir.join("zenus");
+    fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
+    
+    let notes_file = notes_dir.join("notes.json");
+    let json = serde_json::to_string_pretty(&filtered_notes).map_err(|e| format!("Failed to serialize notes: {}", e))?;
+    
+    fs::write(&notes_file, json).map_err(|e| format!("Failed to write notes: {}", e))?;
+    
     Ok(filtered_notes)
 }
 
