@@ -1,4 +1,4 @@
-# Tauri + Preact + Typescript
+# Tauri + Preact + Typescript + Tailwindcss v4 with shadcn/ui
 
 This template should help get you started developing with Tauri, Preact and Typescript in Vite.
 
