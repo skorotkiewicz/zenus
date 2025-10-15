@@ -1,3 +1,4 @@
+import { Snowflake } from "@skorotkiewicz/snowflake-id";
 import { invoke } from "@tauri-apps/api/core";
 import { ChevronDown, ChevronRight, Eye, Plus, Trash2, X } from "lucide-react";
 import { marked } from "marked";
@@ -13,6 +14,7 @@ interface NoteBlock {
 
 function App() {
   const [blocks, setBlocks] = useState<NoteBlock[]>([]);
+  const [snowflake] = useState(() => new Snowflake(1)); // machine ID 1
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     content: string;
@@ -28,13 +30,6 @@ function App() {
     loadNotes();
   }, []);
 
-  // Save notes whenever blocks change
-  useEffect(() => {
-    if (blocks.length > 0) {
-      saveNotes();
-    }
-  }, [blocks]);
-
   const loadNotes = async () => {
     try {
       const loadedBlocks = await invoke<NoteBlock[]>("load_notes");
@@ -44,30 +39,46 @@ function App() {
     }
   };
 
-  const saveNotes = async () => {
+  const saveBlock = async (block: NoteBlock) => {
     try {
-      await invoke("save_notes", { notes: blocks });
+      await invoke("save_block", { block });
     } catch (error) {
-      console.error("Failed to save notes:", error);
+      console.error("Failed to save block:", error);
     }
   };
 
-  const addNewBlock = () => {
-    const newBlock: NoteBlock = {
-      id: Date.now().toString(),
-      title: "",
-      content: "",
-      isCollapsed: false,
-    };
-    setBlocks([...blocks, newBlock]);
+  const addNewBlock = async () => {
+    try {
+      const id = await snowflake.generate();
+      const newBlock: NoteBlock = {
+        id: id.toString(),
+        title: "",
+        content: "",
+        isCollapsed: false,
+      };
+      setBlocks([...blocks, newBlock]);
+      await saveBlock(newBlock);
+    } catch (error) {
+      console.error("Failed to create new block:", error);
+    }
   };
 
-  const updateBlockTitle = (id: string, title: string) => {
-    setBlocks(blocks.map((block) => (block.id === id ? { ...block, title } : block)));
+  const updateBlockTitle = async (id: string, title: string) => {
+    const updatedBlocks = blocks.map((block) => (block.id === id ? { ...block, title } : block));
+    setBlocks(updatedBlocks);
+    const updatedBlock = updatedBlocks.find((block) => block.id === id);
+    if (updatedBlock) {
+      await saveBlock(updatedBlock);
+    }
   };
 
-  const updateBlockContent = (id: string, content: string) => {
-    setBlocks(blocks.map((block) => (block.id === id ? { ...block, content } : block)));
+  const updateBlockContent = async (id: string, content: string) => {
+    const updatedBlocks = blocks.map((block) => (block.id === id ? { ...block, content } : block));
+    setBlocks(updatedBlocks);
+    const updatedBlock = updatedBlocks.find((block) => block.id === id);
+    if (updatedBlock) {
+      await saveBlock(updatedBlock);
+    }
   };
 
   const toggleCollapse = (id: string) => {
@@ -96,11 +107,8 @@ function App() {
 
   const deleteBlock = async (id: string) => {
     try {
-      const updatedBlocks = await invoke<NoteBlock[]>("delete_block", {
-        notes: blocks,
-        blockId: id,
-      });
-      setBlocks(updatedBlocks);
+      await invoke("delete_block", { blockId: id });
+      setBlocks(blocks.filter((block) => block.id !== id));
     } catch (error) {
       console.error("Failed to delete block:", error);
     }
@@ -142,9 +150,9 @@ function App() {
                 </Button>
                 <input
                   value={block.title}
-                  onInput={(e) => {
+                  onInput={async (e) => {
                     const target = e.target as HTMLInputElement;
-                    updateBlockTitle(block.id, target.value);
+                    await updateBlockTitle(block.id, target.value);
                   }}
                   class="border-none bg-transparent text-sm font-medium text-gray-900 dark:text-white focus:outline-none flex-1 placeholder:text-gray-400 font-mono"
                   placeholder="Block title..."
@@ -174,11 +182,11 @@ function App() {
                   <textarea
                     class="w-full border-0 bg-transparent text-gray-900 dark:text-gray-100 resize-none focus:outline-none font-mono text-sm leading-5"
                     value={block.content}
-                    onInput={(e) => {
+                    onInput={async (e) => {
                       const target = e.target as HTMLTextAreaElement;
-                      updateBlockContent(block.id, target.value);
+                      await updateBlockContent(block.id, target.value);
                     }}
-                    placeholder="Linia 2: po kliknieciu na zwiń block, nie bedzie widać tego tekstu.&#10;Linia 3: ani tego&#10;Linia 4: [rozwin block btn] -------- a tutaj mam zawiniete -------- [preview btn] [remove btn]"
+                    placeholder="   Linia 2: po kliknieciu na zwiń block, nie bedzie widać tego tekstu.&#10;Linia 3: ani tego&#10;Linia 4: [rozwin block btn] -------- a tutaj mam zawiniete -------- [preview btn] [remove btn]"
                     style={{
                       lineHeight: "20px",
                       fontFamily:

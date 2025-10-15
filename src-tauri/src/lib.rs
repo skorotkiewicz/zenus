@@ -17,57 +17,89 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn save_notes(notes: Vec<NoteBlock>) -> Result<(), String> {
+fn save_block(block: NoteBlock) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
     
-    let notes_file = notes_dir.join("notes.json");
-    let json = serde_json::to_string_pretty(&notes).map_err(|e| format!("Failed to serialize notes: {}", e))?;
+    let file_path = notes_dir.join(format!("{}.md", block.id));
+    let content = format!("# {}\n\n{}", block.title, block.content);
     
-    fs::write(&notes_file, json).map_err(|e| format!("Failed to write notes: {}", e))?;
+    fs::write(&file_path, content).map_err(|e| format!("Failed to write block: {}", e))?;
     Ok(())
 }
 
 #[tauri::command]
 fn load_notes() -> Result<Vec<NoteBlock>, String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_file = app_dir.join("zenus").join("notes.json");
+    let notes_dir = app_dir.join("zenus");
     
-    if !notes_file.exists() {
+    if !notes_dir.exists() {
         return Ok(vec![]);
     }
     
-    let content = fs::read_to_string(&notes_file).map_err(|e| format!("Failed to read notes: {}", e))?;
-    let notes: Vec<NoteBlock> = serde_json::from_str(&content).map_err(|e| format!("Failed to parse notes: {}", e))?;
+    let mut blocks = Vec::new();
     
-    Ok(notes)
+    for entry in fs::read_dir(&notes_dir).map_err(|e| format!("Failed to read directory: {}", e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        
+        if path.extension().and_then(|s| s.to_str()) == Some("md") {
+            let content = fs::read_to_string(&path).map_err(|e| format!("Failed to read file: {}", e))?;
+            
+            // Extract ID from filename (remove .md extension)
+            let id = path.file_stem()
+                .and_then(|s| s.to_str())
+                .ok_or("Invalid filename")?
+                .to_string();
+            
+            // Parse markdown content
+            let lines: Vec<&str> = content.lines().collect();
+            let title = if lines.len() > 0 && lines[0].starts_with("# ") {
+                lines[0][2..].to_string()
+            } else {
+                "Untitled".to_string()
+            };
+            
+            let block_content = if lines.len() > 2 {
+                lines[2..].join("\n")
+            } else {
+                String::new()
+            };
+            
+            blocks.push(NoteBlock {
+                id,
+                title,
+                content: block_content,
+                is_collapsed: false,
+            });
+        }
+    }
+    
+    // Sort by ID (which contains timestamp)
+    blocks.sort_by(|a, b| a.id.cmp(&b.id));
+    
+    Ok(blocks)
 }
 
 #[tauri::command]
-fn delete_block(notes: Vec<NoteBlock>, block_id: String) -> Result<Vec<NoteBlock>, String> {
-    let filtered_notes: Vec<NoteBlock> = notes.into_iter()
-        .filter(|note| note.id != block_id)
-        .collect();
-    
-    // Save the updated notes to file
+fn delete_block(block_id: String) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
-    fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
+    let file_path = notes_dir.join(format!("{}.md", block_id));
     
-    let notes_file = notes_dir.join("notes.json");
-    let json = serde_json::to_string_pretty(&filtered_notes).map_err(|e| format!("Failed to serialize notes: {}", e))?;
+    if file_path.exists() {
+        fs::remove_file(&file_path).map_err(|e| format!("Failed to delete file: {}", e))?;
+    }
     
-    fs::write(&notes_file, json).map_err(|e| format!("Failed to write notes: {}", e))?;
-    
-    Ok(filtered_notes)
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, save_notes, load_notes, delete_block])
+        .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

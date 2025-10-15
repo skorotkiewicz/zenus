@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
+    "@skorotkiewicz/snowflake-id": "^1.0.1",
     "@tailwindcss/vite": "^4.1.14",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2.5.0",
