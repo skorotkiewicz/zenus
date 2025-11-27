@@ -37,6 +37,28 @@ A beautiful note-taking app built with Tauri, Preact, and Tailwind CSS. Features
    bun run tauri dev
    ```
 
+## Usage Modes
+
+Zenus supports three modes of operation:
+
+### 1. Local Mode (Default)
+Runs as a standalone desktop app, saving notes to the local file system (`~/.local/share/zenus` on Linux).
+```bash
+./zenus
+```
+
+### 2. Server Mode (Headless)
+Runs as a CLI-only API server without the GUI. Useful for hosting your notes on a server.
+```bash
+./zenus --host 0.0.0.0 --port 8888 --auth pass123ord
+```
+
+### 3. Client Mode (Remote)
+Runs the GUI app but connects to a remote Zenus server instead of using local storage.
+```bash
+./zenus --url http://api.zenus.xyz:8888 --auth pass123ord
+```
+
 ## Usage
 
 - **Creating Notes**: Click "New Block, Click Me" to add a new note block

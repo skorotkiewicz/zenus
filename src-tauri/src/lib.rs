@@ -1,7 +1,45 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::sync::Mutex;
+use tauri::State;
+use clap::Parser;
+use std::path::PathBuf;
+use axum::{
+    routing::{get, post, delete},
+    Router, Json, extract::{Path, State as AxumState},
+    http::{StatusCode, HeaderMap},
+    response::IntoResponse,
+};
+use std::net::SocketAddr;
+use tower_http::cors::CorsLayer;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Parser, Debug, Clone)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Host to bind the server to (Server Mode)
+    #[arg(long)]
+    host: Option<String>,
+
+    /// Port to bind/connect to
+    #[arg(long, default_value_t = 8888)]
+    port: u16,
+
+    /// URL of the Zenus server (Client Mode)
+    #[arg(long)]
+    url: Option<String>,
+
+    /// Authentication token/password
+    #[arg(long)]
+    auth: Option<String>,
+}
+
+struct AppState {
+    api_url: Option<String>,
+    auth_token: Option<String>,
+    client: reqwest::Client,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 struct NoteBlock {
     id: String,
     title: String,
@@ -19,7 +57,29 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn save_block(block: NoteBlock) -> Result<(), String> {
+async fn save_block(state: State<'_, AppState>, block: NoteBlock) -> Result<(), String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Send to server
+        let url = format!("{}/notes", api_url);
+        let mut request = state.client.post(&url).json(&block);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?;
+            
+        Ok(())
+    } else {
+        // Local Mode: Save to disk
+        save_block_local(block)
+    }
+}
+
+fn save_block_local(block: NoteBlock) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
@@ -42,7 +102,31 @@ fn save_block(block: NoteBlock) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn load_notes() -> Result<Vec<NoteBlock>, String> {
+async fn load_notes(state: State<'_, AppState>) -> Result<Vec<NoteBlock>, String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Fetch from server
+        let url = format!("{}/notes", api_url);
+        let mut request = state.client.get(&url);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        let blocks = request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?
+            .json::<Vec<NoteBlock>>().await
+            .map_err(|e| format!("Failed to parse response: {}", e))?;
+            
+        Ok(blocks)
+    } else {
+        // Local Mode: Read from disk
+        load_notes_local()
+    }
+}
+
+fn load_notes_local() -> Result<Vec<NoteBlock>, String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     
@@ -124,7 +208,29 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
 }
 
 #[tauri::command]
-fn delete_block(block_id: String) -> Result<(), String> {
+async fn delete_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Delete on server
+        let url = format!("{}/notes/{}", api_url, block_id);
+        let mut request = state.client.delete(&url);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?;
+            
+        Ok(())
+    } else {
+        // Local Mode: Delete from disk
+        delete_block_local(block_id)
+    }
+}
+
+fn delete_block_local(block_id: String) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     let file_path = notes_dir.join(format!("{}.md", block_id));
@@ -137,7 +243,29 @@ fn delete_block(block_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn update_orders(orders: Vec<(String, i32)>) -> Result<(), String> {
+async fn update_orders(state: State<'_, AppState>, orders: Vec<(String, i32)>) -> Result<(), String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Update on server
+        let url = format!("{}/notes/reorder", api_url);
+        let mut request = state.client.post(&url).json(&orders);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?;
+            
+        Ok(())
+    } else {
+        // Local Mode: Update on disk
+        update_orders_local(orders)
+    }
+}
+
+fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     
@@ -169,10 +297,108 @@ fn update_orders(orders: Vec<(String, i32)>) -> Result<(), String> {
     Ok(())
 }
 
+// Server implementation
+async fn run_server(host: String, port: u16, auth_token: Option<String>) {
+    println!("Starting Zenus Server on {}:{}", host, port);
+    if auth_token.is_some() {
+        println!("Authentication enabled");
+    }
+
+    #[derive(Clone)]
+    struct ServerState {
+        auth_token: Option<String>,
+    }
+
+    // Middleware to check auth
+    async fn auth_middleware(
+        AxumState(state): AxumState<ServerState>,
+        headers: HeaderMap,
+        request: axum::extract::Request,
+        next: axum::middleware::Next,
+    ) -> Result<impl IntoResponse, StatusCode> {
+        if let Some(token) = &state.auth_token {
+            let auth_header = headers.get("Authorization")
+                .and_then(|h| h.to_str().ok());
+            
+            if auth_header != Some(token) {
+                return Err(StatusCode::UNAUTHORIZED);
+            }
+        }
+        Ok(next.run(request).await)
+    }
+
+    let app = Router::new()
+        .route("/notes", get(api_get_notes).post(api_save_note))
+        .route("/notes/:id", delete(api_delete_note))
+        .route("/notes/reorder", post(api_reorder_notes))
+        .layer(CorsLayer::permissive())
+        .layer(axum::middleware::from_fn_with_state(
+            ServerState { auth_token: auth_token.clone() },
+            auth_middleware
+        ))
+        .with_state(ServerState { auth_token });
+
+    let addr: SocketAddr = format!("{}:{}", host, port).parse().expect("Invalid address");
+    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
+// API Handlers
+async fn api_get_notes() -> Json<Vec<NoteBlock>> {
+    match load_notes_local() {
+        Ok(notes) => Json(notes),
+        Err(_) => Json(vec![]),
+    }
+}
+
+async fn api_save_note(Json(block): Json<NoteBlock>) -> StatusCode {
+    match save_block_local(block) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn api_delete_note(Path(id): Path<String>) -> StatusCode {
+    match delete_block_local(id) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn api_reorder_notes(Json(orders): Json<Vec<(String, i32)>>) -> StatusCode {
+    match update_orders_local(orders) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let args = Args::parse();
+
+    // Validation: Cannot have both host (Server) and url (Client)
+    if args.host.is_some() && args.url.is_some() {
+        eprintln!("Error: Cannot run in both Server Mode (--host) and Client Mode (--url) at the same time.");
+        std::process::exit(1);
+    }
+
+    // Server Mode
+    if let Some(host) = args.host {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(run_server(host, args.port, args.auth));
+        return;
+    }
+
+    // Client/Local Mode
+    let app_state = AppState {
+        api_url: args.url,
+        auth_token: args.auth,
+        client: reqwest::Client::new(),
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(app_state)
         .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block, update_orders])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
