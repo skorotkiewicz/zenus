@@ -23,7 +23,16 @@ fn save_block(block: NoteBlock) -> Result<(), String> {
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
     
     let file_path = notes_dir.join(format!("{}.md", block.id));
-    let content = format!("# {}\n\n{}", block.title, block.content);
+    
+    // Save metadata as JSON comment at the top
+    let metadata = serde_json::to_string(&serde_json::json!({
+        "title": block.title,
+        "isCollapsed": block.is_collapsed,
+        "createdAt": chrono::Utc::now().to_rfc3339(),
+        "updatedAt": chrono::Utc::now().to_rfc3339()
+    })).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
+    
+    let content = format!("<!-- {} -->\n\n{}", metadata, block.content);
     
     fs::write(&file_path, content).map_err(|e| format!("Failed to write block: {}", e))?;
     Ok(())
@@ -55,14 +64,33 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
             
             // Parse markdown content
             let lines: Vec<&str> = content.lines().collect();
-            let title = if lines.len() > 0 && lines[0].starts_with("# ") {
-                lines[0][2..].to_string()
-            } else {
-                "Untitled".to_string()
-            };
             
-            let block_content = if lines.len() > 2 {
-                lines[2..].join("\n")
+            // Check for metadata comment at the top
+            let mut is_collapsed = false;
+            let mut title = "Untitled".to_string();
+            let mut content_start = 0;
+            
+            if lines.len() > 0 && lines[0].starts_with("<!-- ") && lines[0].ends_with(" -->") {
+                // Extract metadata from comment
+                let metadata_str = &lines[0][5..lines[0].len()-4]; // Remove <!-- and -->
+                if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(metadata_str) {
+                    if let Some(collapsed) = metadata.get("isCollapsed").and_then(|v| v.as_bool()) {
+                        is_collapsed = collapsed;
+                    }
+                    if let Some(title_str) = metadata.get("title").and_then(|v| v.as_str()) {
+                        title = title_str.to_string();
+                    }
+                }
+                content_start = 1; // Skip metadata line
+            }
+            
+            // Fallback: try to read title from markdown header if no metadata
+            if title == "Untitled" && lines.len() > content_start && lines[content_start].starts_with("# ") {
+                title = lines[content_start][2..].to_string();
+            }
+            
+            let block_content = if lines.len() > content_start + 1 {
+                lines[content_start + 1..].join("\n")
             } else {
                 String::new()
             };
@@ -71,7 +99,7 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
                 id,
                 title,
                 content: block_content,
-                is_collapsed: false,
+                is_collapsed,
             });
         }
     }

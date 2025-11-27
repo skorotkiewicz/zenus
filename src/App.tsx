@@ -1,20 +1,16 @@
 import { Snowflake } from "@skorotkiewicz/snowflake-id";
 import { invoke } from "@tauri-apps/api/core";
-import { ChevronDown, ChevronRight, Eye, Plus, Trash2, X } from "lucide-react";
-import { marked } from "marked";
-import { useEffect, useState } from "preact/hooks";
+import { Plus } from "lucide-react";
+import { useEffect, useRef, useState } from "preact/hooks";
+import EditorContent from "@/components/editorContent";
 import { Button } from "@/components/ui/button";
-
-interface NoteBlock {
-  id: string;
-  title: string;
-  content: string;
-  isCollapsed: boolean;
-}
+import PreviewModal from "./components/previewModal";
+import type { NoteBlock } from "./types";
 
 function App() {
   const [blocks, setBlocks] = useState<NoteBlock[]>([]);
   const [snowflake] = useState(() => new Snowflake(1)); // machine ID 1
+  const endBlocksRef = useRef<HTMLDivElement>(null);
   const [previewModal, setPreviewModal] = useState<{
     isOpen: boolean;
     content: string;
@@ -58,6 +54,14 @@ function App() {
       };
       setBlocks([...blocks, newBlock]);
       await saveBlock(newBlock);
+
+      // Scroll to the new block after it's added
+      if (endBlocksRef.current) {
+        endBlocksRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
+      }
     } catch (error) {
       console.error("Failed to create new block:", error);
     }
@@ -81,12 +85,17 @@ function App() {
     }
   };
 
-  const toggleCollapse = (id: string) => {
-    setBlocks(
-      blocks.map((block) =>
-        block.id === id ? { ...block, isCollapsed: !block.isCollapsed } : block,
-      ),
+  const toggleCollapse = async (id: string) => {
+    const updatedBlocks = blocks.map((block) =>
+      block.id === id ? { ...block, isCollapsed: !block.isCollapsed } : block,
     );
+    setBlocks(updatedBlocks);
+
+    // Save the updated block to persist collapse state
+    const updatedBlock = updatedBlocks.find((block) => block.id === id);
+    if (updatedBlock) {
+      await saveBlock(updatedBlock);
+    }
   };
 
   const openPreviewModal = (content: string, title: string) => {
@@ -116,14 +125,14 @@ function App() {
 
   const renderBlockAsLines = (block: NoteBlock) => {
     const lines = block.content.split("\n");
-    // When collapsed, show only 1 line. When expanded, show actual content length with minimum of 5
-    const lineCount = block.isCollapsed ? 1 : lines.length;
+    const lineCount = block.isCollapsed ? 1 : lines.length; // +1 dla linii tytułu
+    // const lineCount = block.isCollapsed ? 1 : lines.length + 1; // +1 dla linii tytułu
 
     return (
       <div class="bg-white dark:bg-gray-900 overflow-hidden">
         <div class="flex">
           {/* Line Numbers */}
-          <div class="flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 py-2 text-right text-sm text-gray-500 dark:text-gray-400 font-mono border-r border-gray-300 dark:border-gray-600 min-w-[50px]">
+          <div class="NO_CALC_VARIABLES flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 py-2 text-right text-sm text-gray-500 dark:text-gray-400 font-mono border-r border-gray-300 dark:border-gray-600 min-w-[50px]">
             {Array.from({ length: lineCount }, (_, i) => (
               <div key={i} class="h-5 leading-5 select-none">
                 {i + 1}
@@ -132,72 +141,15 @@ function App() {
           </div>
 
           {/* Editor Content */}
-          <div class="flex-1">
-            <div class="p-2">
-              {/* First Line with Buttons */}
-              <div class="flex items-center h-5 leading-5 mb-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleCollapse(block.id)}
-                  class="h-4 w-4 p-0 mr-2 hover:bg-gray-200 dark:hover:bg-gray-700"
-                >
-                  {block.isCollapsed ? (
-                    <ChevronRight class="w-3 h-3" />
-                  ) : (
-                    <ChevronDown class="w-3 h-3" />
-                  )}
-                </Button>
-                <input
-                  value={block.title}
-                  onInput={async (e) => {
-                    const target = e.target as HTMLInputElement;
-                    await updateBlockTitle(block.id, target.value);
-                  }}
-                  class="border-none bg-transparent text-sm font-medium text-gray-900 dark:text-white focus:outline-none flex-1 placeholder:text-gray-400 font-mono"
-                  placeholder="Block title..."
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openPreviewModal(block.content, block.title)}
-                  class="h-4 px-1 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white text-xs hover:bg-gray-200 dark:hover:bg-gray-700 mr-1"
-                >
-                  <Eye class="w-3 h-3 mr-1" />
-                  Preview
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => deleteBlock(block.id)}
-                  class="h-4 px-1 text-red-500 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20 text-xs"
-                >
-                  <Trash2 class="w-3 h-3" />
-                </Button>
-              </div>
-
-              {/* Content Lines */}
-              {!block.isCollapsed && (
-                <div class="mt-2">
-                  <textarea
-                    class="w-full border-0 bg-transparent text-gray-900 dark:text-gray-100 resize-none focus:outline-none font-mono text-sm leading-5"
-                    value={block.content}
-                    onInput={async (e) => {
-                      const target = e.target as HTMLTextAreaElement;
-                      await updateBlockContent(block.id, target.value);
-                    }}
-                    placeholder="Main block content..."
-                    style={{
-                      lineHeight: "20px",
-                      fontFamily:
-                        'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                      height: `${lines.length * 20}px`,
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
+          <EditorContent
+            block={block}
+            toggleCollapse={toggleCollapse}
+            updateBlockTitle={updateBlockTitle}
+            openPreviewModal={openPreviewModal}
+            deleteBlock={deleteBlock}
+            updateBlockContent={updateBlockContent}
+            lines={lines}
+          />
         </div>
       </div>
     );
@@ -240,7 +192,9 @@ function App() {
             </Button>
           </div>
         ) : (
-          <div class="p-6">
+          <div>
+            {/* <div class="p-6"> */}
+            {/* <div class="border border-gray-300 dark:border-gray-600 overflow-hidden divide-y divide-gray-300 dark:divide-gray-600"> */}
             <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden divide-y divide-gray-300 dark:divide-gray-600">
               {blocks.map((block) => (
                 <div key={block.id}>{renderBlockAsLines(block)}</div>
@@ -248,38 +202,11 @@ function App() {
             </div>
           </div>
         )}
+        <div ref={endBlocksRef} />
       </div>
 
       {/* Full Screen Preview Modal */}
-      {previewModal.isOpen && (
-        <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div class="bg-white dark:bg-gray-900 w-full h-full flex flex-col">
-            {/* Modal Header */}
-            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {previewModal.title || "Preview"}
-              </h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={closePreviewModal}
-                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              >
-                <X class="w-6 h-6" />
-              </Button>
-            </div>
-
-            {/* Modal Content */}
-            <div class="flex-1 overflow-auto p-6">
-              <div
-                class="prose prose-lg max-w-none dark:prose-invert"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: Markdown content is safe as it's user-controlled
-                dangerouslySetInnerHTML={{ __html: marked.parse(previewModal.content) as string }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <PreviewModal previewModal={previewModal} closePreviewModal={closePreviewModal} />
     </div>
   );
 }
