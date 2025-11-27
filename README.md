@@ -2,6 +2,8 @@
 
 A beautiful note-taking app built with Tauri, Preact, and Tailwind CSS. Features markdown preview, customizable block titles, and a clean, modern interface.
 
+![](screenshot.png)
+
 ## Features
 
 - **Block-based Notes**: Organize your notes in customizable blocks
