@@ -1,5 +1,11 @@
+import { markdown } from "@codemirror/lang-markdown";
+// import { oneDark } from "@codemirror/theme-one-dark";
+// import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
+import { xcodeDark, xcodeLight } from "@uiw/codemirror-theme-xcode";
+import CodeMirror from "@uiw/react-codemirror";
 import { ChevronDown, ChevronRight, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/useTheme";
 import type { RenderBlockAsLines } from "@/types";
 
 const EditorContent = ({
@@ -9,13 +15,12 @@ const EditorContent = ({
   openPreviewModal,
   deleteBlock,
   updateBlockContent,
-  lines,
 }: RenderBlockAsLines) => {
+  const { theme } = useTheme();
+
   return (
     <div class="flex-1">
       <div class="">
-        {/* <div class="p-2"> */}
-        {/* First Line with Buttons */}
         <div class="flex items-center h-5 leading-5 group/line">
           <Button
             variant="ghost"
@@ -35,8 +40,7 @@ const EditorContent = ({
             placeholder="Block title..."
           />
 
-          {/* Actions - Visible on Group Hover */}
-          <div class="flex items-center  opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity duration-200 pr-4">
+          <div class="flex items-center opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity duration-200 pr-4">
             <Button
               variant="ghost"
               size="sm"
@@ -57,33 +61,26 @@ const EditorContent = ({
           </div>
         </div>
 
-        {/* Content Lines - Line 2+ */}
         {!block.isCollapsed && (
-          <textarea
-            class="w-full bg-transparent text-foreground font-mono placeholder:text-muted-foreground/40"
-            value={block.content}
-            onInput={async (e) => {
-              const target = e.target as HTMLTextAreaElement;
-              await updateBlockContent(block.id, target.value);
-            }}
-            placeholder="Main block content..."
-            style={{
-              fontSize: "14px",
-              lineHeight: "20px",
-              fontFamily:
-                'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-              height: `${lines.length * 20}px`,
-              padding: "0",
-              margin: "0",
-              border: "none",
-              outline: "none",
-              resize: "none",
-              overflow: "hidden",
-              boxSizing: "border-box",
-              direction: "ltr",
-              textAlign: "left",
-            }}
-          />
+          <div class="codemirror-wrapper">
+            <CodeMirror
+              key={`${block.id}-${theme}`}
+              value={block.content}
+              onChange={(value: string) => updateBlockContent(block.id, value)}
+              extensions={[markdown()]}
+              // theme={theme === "dark" ? oneDark : xcodeLight}
+              theme={theme === "dark" ? xcodeDark : xcodeLight}
+              // theme={theme === "dark" ? githubDark : githubLight}
+              basicSetup={{
+                lineNumbers: true,
+                highlightActiveLineGutter: false,
+                highlightActiveLine: false,
+                foldGutter: false,
+              }}
+              placeholder="Write something..."
+              className="codemirror-editor"
+            />
+          </div>
         )}
       </div>
     </div>

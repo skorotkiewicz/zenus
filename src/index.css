@@ -123,6 +123,50 @@
   }
 }
 
+/* CodeMirror Editor Styles */
+.codemirror-wrapper {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/*.codemirror-editor .cm-editor {
+  background-color: transparent;
+}*/
+
+.codemirror-editor .cm-lineNumbers {
+  background-color: oklch(var(--muted) / 0.3); 
+  min-width: 40px;
+  padding-right: 5px;
+}
+
+.codemirror-editor .cm-editor {
+  outline: none !important;
+}
+
+/*
+.codemirror-editor .cm-scroller {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.codemirror-editor .cm-gutters {
+  background-color: oklch(var(--muted) / 0.3);
+  border-right: 1px solid oklch(var(--border) / 0.5);
+  color: oklch(var(--muted-foreground) / 0.6);
+  font-family: var(--font-mono);
+}
+
+.codemirror-editor .cm-activeLineGutter {
+  background-color: oklch(var(--muted) / 0.5);
+}
+
+.codemirror-editor .cm-activeLine {
+  background-color: oklch(var(--muted) / 0.2);
+}*/
+
+
 /* Prose styling for markdown content */
 .prose {
   @apply text-gray-900 dark:text-gray-100;

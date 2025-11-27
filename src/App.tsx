@@ -234,24 +234,31 @@ function App() {
                             className="bg-card group hover:bg-muted/30 transition-colors duration-200"
                           >
                             <div className="flex">
-                              {/* Line Numbers as Drag Handle */}
+                              {/* Drag Handle */}
                               <div
                                 {...(provided.dragHandleProps as any)}
-                                className="cursor-grab active:cursor-grabbing flex-shrink-0 bg-muted/30 px-3 py-2 text-right text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[50px] select-none flex flex-col items-end"
+                                className="cursor-grab active:cursor-grabbing flex-shrink-0 bg-muted/30 px-3 py-2 text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[30px] select-none flex items-center justify-center"
                                 title="Drag to reorder"
                               >
-                                {Array.from(
-                                  {
-                                    length: block.isCollapsed
-                                      ? 1
-                                      : block.content.split("\n").length,
-                                  },
-                                  (_, i) => (
-                                    <div key={i} className="h-5 leading-5">
-                                      {i + 1}
-                                    </div>
-                                  ),
-                                )}
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <title>Drag handle</title>
+                                  <circle cx="9" cy="12" r="1" />
+                                  <circle cx="9" cy="5" r="1" />
+                                  <circle cx="9" cy="19" r="1" />
+                                  <circle cx="15" cy="12" r="1" />
+                                  <circle cx="15" cy="5" r="1" />
+                                  <circle cx="15" cy="19" r="1" />
+                                </svg>
                               </div>
 
                               {/* Editor Content */}
