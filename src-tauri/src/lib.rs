@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::sync::Mutex;
 use tauri::State;
 use clap::Parser;
-use std::path::PathBuf;
 use axum::{
     routing::{get, post, delete},
     Router, Json, extract::{Path, State as AxumState},
