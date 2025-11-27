@@ -130,12 +130,12 @@ function App() {
     // const lineCount = block.isCollapsed ? 1 : lines.length + 1; // +1 dla linii tytułu
 
     return (
-      <div class="bg-white dark:bg-gray-900 overflow-hidden">
+      <div class="bg-card group hover:bg-muted/30 transition-colors duration-200">
         <div class="flex">
           {/* Line Numbers */}
-          <div class="NO_CALC_VARIABLES flex-shrink-0 bg-gray-100 dark:bg-gray-800 px-3 py-2 text-right text-sm text-gray-500 dark:text-gray-400 font-mono border-r border-gray-300 dark:border-gray-600 min-w-[50px]">
+          <div class="NO_CALC_VARIABLES flex-shrink-0 bg-muted/30 px-3 py-2 text-right text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[50px] select-none">
             {Array.from({ length: lineCount }, (_, i) => (
-              <div key={i} class="h-5 leading-5 select-none">
+              <div key={i} class="h-5 leading-5">
                 {i + 1}
               </div>
             ))}
@@ -157,18 +157,18 @@ function App() {
   };
 
   return (
-    <div class="h-screen w-screen bg-white dark:bg-gray-900 flex flex-col">
+    <div class="h-screen w-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
       {/* App Title Bar */}
-      <div class="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div class="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div class="flex items-center space-x-3">
-          <h1 class="text-xl font-semibold text-gray-900 dark:text-white">Zen Notes</h1>
+          <h1 class="text-xl font-semibold tracking-tight">Zen Notes</h1>
         </div>
         <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-500 dark:text-gray-400">
+          <span class="text-sm text-muted-foreground font-medium">
             {blocks.length} {blocks.length === 1 ? "block" : "blocks"}
           </span>
           <ModeToggle />
-          <Button onClick={addNewBlock} size="sm">
+          <Button onClick={addNewBlock} size="sm" class="shadow-sm">
             <Plus class="w-4 h-4 mr-2" />
             New Block
           </Button>
@@ -176,26 +176,28 @@ function App() {
       </div>
 
       {/* Main Content */}
-      <div class="flex-1 overflow-auto">
+      <div class="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
         {blocks.length === 0 ? (
-          <div class="flex flex-col items-center justify-center h-full text-center px-6">
-            <div class="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center mb-6">
-              <Plus class="w-10 h-10 text-gray-400" />
+          <div class="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
+            <div class="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+              <Plus class="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 class="text-2xl font-medium text-gray-900 dark:text-white mb-3">
-              Welcome to Zen Notes
-            </h3>
-            <p class="text-gray-500 dark:text-gray-400 mb-8 text-lg max-w-md">
-              Create your first block to get started
+            <h3 class="text-2xl font-semibold tracking-tight mb-2">Welcome to Zen Notes</h3>
+            <p class="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
+              Your space for clarity and focus. Create your first block to get started.
             </p>
-            <Button onClick={addNewBlock} size="lg">
+            <Button
+              onClick={addNewBlock}
+              size="lg"
+              class="shadow-md hover:shadow-lg transition-all"
+            >
               <Plus class="w-5 h-5 mr-2" />
               Create First Block
             </Button>
           </div>
         ) : (
           <div>
-            <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden divide-y divide-gray-300 dark:divide-gray-600">
+            <div class="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden divide-y divide-border/50">
               {blocks.map((block) => (
                 <div key={block.id}>{renderBlockAsLines(block)}</div>
               ))}

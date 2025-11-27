@@ -7,18 +7,18 @@ const PreviewModal = ({ previewModal, closePreviewModal }: PreviewModalProps) =>
   return (
     <>
       {previewModal.isOpen && (
-        <div class="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-          <div class="bg-white dark:bg-gray-900 w-full h-full flex flex-col">
+        <div class="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+          <div class="bg-background w-full h-full flex flex-col">
             {/* Modal Header */}
-            <div class="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <div class="flex items-center justify-between p-6 border-b border-border/40">
+              <h2 class="text-2xl font-bold text-foreground tracking-tight">
                 {previewModal.title || "Preview"}
               </h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={closePreviewModal}
-                class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                class="text-muted-foreground hover:text-foreground"
               >
                 <X class="w-6 h-6" />
               </Button>
