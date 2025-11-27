@@ -1,6 +1,13 @@
+import {
+  DragDropContext,
+  Draggable,
+  type DraggableProvided,
+  Droppable,
+  type DroppableProvided,
+} from "@hello-pangea/dnd";
 import { Snowflake } from "@skorotkiewicz/snowflake-id";
 import { invoke } from "@tauri-apps/api/core";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useEffect, useRef, useState } from "preact/hooks";
 import EditorContent from "@/components/editorContent";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -10,6 +17,7 @@ import type { NoteBlock } from "./types";
 
 function App() {
   const [blocks, setBlocks] = useState<NoteBlock[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [snowflake] = useState(() => new Snowflake(1)); // machine ID 1
   const endBlocksRef = useRef<HTMLDivElement>(null);
   const [previewModal, setPreviewModal] = useState<{
@@ -26,6 +34,12 @@ function App() {
   useEffect(() => {
     loadNotes();
   }, []);
+
+  const filteredBlocks = blocks.filter(
+    (block) =>
+      block.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      block.content.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
 
   const loadNotes = async () => {
     try {
@@ -52,6 +66,7 @@ function App() {
         title: "",
         content: "",
         isCollapsed: false,
+        order: blocks.length,
       };
       setBlocks([...blocks, newBlock]);
       await saveBlock(newBlock);
@@ -124,84 +139,141 @@ function App() {
     }
   };
 
-  const renderBlockAsLines = (block: NoteBlock) => {
-    const lines = block.content.split("\n");
-    const lineCount = block.isCollapsed ? 1 : lines.length; // +1 dla linii tytułu
-    // const lineCount = block.isCollapsed ? 1 : lines.length + 1; // +1 dla linii tytułu
-
-    return (
-      <div class="bg-card group hover:bg-muted/30 transition-colors duration-200">
-        <div class="flex">
-          {/* Line Numbers */}
-          <div class="NO_CALC_VARIABLES flex-shrink-0 bg-muted/30 px-3 py-2 text-right text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[50px] select-none">
-            {Array.from({ length: lineCount }, (_, i) => (
-              <div key={i} class="h-5 leading-5">
-                {i + 1}
-              </div>
-            ))}
-          </div>
-
-          {/* Editor Content */}
-          <EditorContent
-            block={block}
-            toggleCollapse={toggleCollapse}
-            updateBlockTitle={updateBlockTitle}
-            openPreviewModal={openPreviewModal}
-            deleteBlock={deleteBlock}
-            updateBlockContent={updateBlockContent}
-            lines={lines}
-          />
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div class="h-screen w-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
+    <div className="h-screen w-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
       {/* App Title Bar */}
-      <div class="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div class="flex items-center space-x-3">
-          <h1 class="text-xl font-semibold tracking-tight">Zen Notes</h1>
+      <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center space-x-3">
+          <h1 className="text-xl font-semibold tracking-tight">Zen Notes</h1>
         </div>
-        <div class="flex items-center space-x-4">
-          <span class="text-sm text-muted-foreground font-medium">
-            {blocks.length} {blocks.length === 1 ? "block" : "blocks"}
+        <div className="flex items-center space-x-4">
+          <div className="relative w-64 hidden md:block">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search blocks..."
+              value={searchTerm}
+              onInput={(e) => setSearchTerm((e.target as HTMLInputElement).value)}
+              className="w-full pl-8 pr-3 py-1 text-sm bg-muted/50 border border-border/50 rounded-md focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+            />
+          </div>
+          <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">
+            {filteredBlocks.length} {filteredBlocks.length === 1 ? "block" : "blocks"}
           </span>
           <ModeToggle />
-          <Button onClick={addNewBlock} size="sm" class="shadow-sm">
-            <Plus class="w-4 h-4 mr-2" />
+          <Button onClick={addNewBlock} size="sm" className="shadow-sm">
+            <Plus className="w-4 h-4 mr-2" />
             New Block
           </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div class="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
+      <div className="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
         {blocks.length === 0 ? (
-          <div class="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
-            <div class="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-              <Plus class="w-10 h-10 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+              <Plus className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 class="text-2xl font-semibold tracking-tight mb-2">Welcome to Zen Notes</h3>
-            <p class="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
+            <h3 className="text-2xl font-semibold tracking-tight mb-2">Welcome to Zen Notes</h3>
+            <p className="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
               Your space for clarity and focus. Create your first block to get started.
             </p>
             <Button
               onClick={addNewBlock}
               size="lg"
-              class="shadow-md hover:shadow-lg transition-all"
+              className="shadow-md hover:shadow-lg transition-all"
             >
-              <Plus class="w-5 h-5 mr-2" />
+              <Plus className="w-5 h-5 mr-2" />
               Create First Block
             </Button>
           </div>
         ) : (
           <div>
-            <div class="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden divide-y divide-border/50">
-              {blocks.map((block) => (
-                <div key={block.id}>{renderBlockAsLines(block)}</div>
-              ))}
-            </div>
+            <DragDropContext
+              onDragEnd={async (result) => {
+                if (!result.destination) return;
+
+                const items = Array.from(blocks);
+                const [reorderedItem] = items.splice(result.source.index, 1);
+                items.splice(result.destination.index, 0, reorderedItem);
+
+                // Recalculate orders
+                const updatedItems = items.map((item, index) => ({
+                  ...item,
+                  order: index,
+                }));
+
+                setBlocks(updatedItems);
+
+                // Save new order to backend
+                try {
+                  const orders = updatedItems.map(
+                    (item) => [item.id, item.order] as [string, number],
+                  );
+                  await invoke("update_orders", { orders });
+                } catch (error) {
+                  console.error("Failed to update orders:", error);
+                }
+              }}
+            >
+              <Droppable droppableId="blocks">
+                {(provided: DroppableProvided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden divide-y divide-border/50"
+                  >
+                    {filteredBlocks.map((block, index) => (
+                      <Draggable key={block.id} draggableId={block.id} index={index}>
+                        {(provided: DraggableProvided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            style={provided.draggableProps.style as any}
+                            className="bg-card group hover:bg-muted/30 transition-colors duration-200"
+                          >
+                            <div className="flex">
+                              {/* Line Numbers as Drag Handle */}
+                              <div
+                                {...(provided.dragHandleProps as any)}
+                                className="cursor-grab active:cursor-grabbing flex-shrink-0 bg-muted/30 px-3 py-2 text-right text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[50px] select-none flex flex-col items-end"
+                                title="Drag to reorder"
+                              >
+                                {Array.from(
+                                  {
+                                    length: block.isCollapsed
+                                      ? 1
+                                      : block.content.split("\n").length,
+                                  },
+                                  (_, i) => (
+                                    <div key={i} className="h-5 leading-5">
+                                      {i + 1}
+                                    </div>
+                                  ),
+                                )}
+                              </div>
+
+                              {/* Editor Content */}
+                              <EditorContent
+                                block={block}
+                                toggleCollapse={toggleCollapse}
+                                updateBlockTitle={updateBlockTitle}
+                                openPreviewModal={openPreviewModal}
+                                deleteBlock={deleteBlock}
+                                updateBlockContent={updateBlockContent}
+                                lines={block.content.split("\n")}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
         )}
         <div ref={endBlocksRef} />

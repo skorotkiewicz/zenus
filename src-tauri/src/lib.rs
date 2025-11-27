@@ -8,6 +8,8 @@ struct NoteBlock {
     content: String,
     #[serde(rename = "isCollapsed")]
     is_collapsed: bool,
+    #[serde(default)]
+    order: i32,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -28,6 +30,7 @@ fn save_block(block: NoteBlock) -> Result<(), String> {
     let metadata = serde_json::to_string(&serde_json::json!({
         "title": block.title,
         "isCollapsed": block.is_collapsed,
+        "order": block.order,
         "createdAt": chrono::Utc::now().to_rfc3339(),
         "updatedAt": chrono::Utc::now().to_rfc3339()
     })).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
@@ -68,6 +71,7 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
             // Check for metadata comment at the top
             let mut is_collapsed = false;
             let mut title = "Untitled".to_string();
+            let mut order = 0;
             let mut content_start = 0;
             
             if lines.len() > 0 && lines[0].starts_with("<!-- ") && lines[0].ends_with(" -->") {
@@ -79,6 +83,9 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
                     }
                     if let Some(title_str) = metadata.get("title").and_then(|v| v.as_str()) {
                         title = title_str.to_string();
+                    }
+                    if let Some(order_val) = metadata.get("order").and_then(|v| v.as_i64()) {
+                        order = order_val as i32;
                     }
                 }
                 content_start = 1; // Skip metadata line
@@ -100,12 +107,18 @@ fn load_notes() -> Result<Vec<NoteBlock>, String> {
                 title,
                 content: block_content,
                 is_collapsed,
+                order,
             });
         }
     }
     
-    // Sort by ID (which contains timestamp)
-    blocks.sort_by(|a, b| a.id.cmp(&b.id));
+    // Sort by order, then by ID
+    blocks.sort_by(|a, b| {
+        match a.order.cmp(&b.order) {
+            std::cmp::Ordering::Equal => a.id.cmp(&b.id),
+            other => other,
+        }
+    });
     
     Ok(blocks)
 }
@@ -123,11 +136,44 @@ fn delete_block(block_id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+fn update_orders(orders: Vec<(String, i32)>) -> Result<(), String> {
+    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+    let notes_dir = app_dir.join("zenus");
+    
+    for (id, order) in orders {
+        let file_path = notes_dir.join(format!("{}.md", id));
+        if file_path.exists() {
+            let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
+            let lines: Vec<&str> = content.lines().collect();
+            
+            if lines.len() > 0 && lines[0].starts_with("<!-- ") && lines[0].ends_with(" -->") {
+                let metadata_str = &lines[0][5..lines[0].len()-4];
+                if let Ok(mut metadata) = serde_json::from_str::<serde_json::Value>(metadata_str) {
+                    // Update order in metadata
+                    if let Some(obj) = metadata.as_object_mut() {
+                        obj.insert("order".to_string(), serde_json::json!(order));
+                        obj.insert("updatedAt".to_string(), serde_json::json!(chrono::Utc::now().to_rfc3339()));
+                    }
+                    
+                    // Reconstruct file content
+                    let new_metadata = serde_json::to_string(&metadata).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
+                    let body = if lines.len() > 1 { lines[1..].join("\n") } else { String::new() };
+                    let new_content = format!("<!-- {} -->\n{}", new_metadata, body);
+                    
+                    fs::write(&file_path, new_content).map_err(|e| format!("Failed to write file: {}", e))?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block])
+        .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block, update_orders])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

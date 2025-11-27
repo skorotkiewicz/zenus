@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@mdxeditor/editor": "^3.50.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@skorotkiewicz/snowflake-id": "^1.0.1",

@@ -3,6 +3,7 @@ export interface NoteBlock {
   title: string;
   content: string;
   isCollapsed: boolean;
+  order: number;
 }
 
 export interface PreviewModalProps {
