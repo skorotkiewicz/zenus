@@ -28,7 +28,6 @@ const PreviewModal = ({ previewModal, closePreviewModal }: PreviewModalProps) =>
             <div class="flex-1 overflow-auto p-6">
               <div
                 class="prose prose-lg max-w-none dark:prose-invert"
-                // biome-ignore lint/security/noDangerouslySetInnerHtml: Markdown content is safe as it's user-controlled
                 dangerouslySetInnerHTML={{ __html: marked.parse(previewModal.content) as string }}
               />
             </div>

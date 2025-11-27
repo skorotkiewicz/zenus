@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "preact/hooks";
 import EditorContent from "@/components/editorContent";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import PreviewModal from "./components/previewModal";
 import type { NoteBlock } from "./types";
@@ -166,6 +167,7 @@ function App() {
           <span class="text-sm text-gray-500 dark:text-gray-400">
             {blocks.length} {blocks.length === 1 ? "block" : "blocks"}
           </span>
+          <ModeToggle />
           <Button onClick={addNewBlock} size="sm">
             <Plus class="w-4 h-4 mr-2" />
             New Block
@@ -193,8 +195,6 @@ function App() {
           </div>
         ) : (
           <div>
-            {/* <div class="p-6"> */}
-            {/* <div class="border border-gray-300 dark:border-gray-600 overflow-hidden divide-y divide-gray-300 dark:divide-gray-600"> */}
             <div class="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden divide-y divide-gray-300 dark:divide-gray-600">
               {blocks.map((block) => (
                 <div key={block.id}>{renderBlockAsLines(block)}</div>
