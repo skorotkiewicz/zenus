@@ -4,6 +4,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { xcodeDark, xcodeLight } from "@uiw/codemirror-theme-xcode";
 import CodeMirror from "@uiw/react-codemirror";
 import { ChevronDown, ChevronRight, Eye, Trash2 } from "lucide-react";
+import { useState } from "preact/hooks";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import type { RenderBlockAsLines } from "@/types";
@@ -17,6 +18,7 @@ const EditorContent = ({
   updateBlockContent,
 }: RenderBlockAsLines) => {
   const { theme } = useTheme();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <div class="flex-1">
@@ -50,14 +52,39 @@ const EditorContent = ({
               <Eye class="w-3 h-3 mr-1" />
               Preview
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => deleteBlock(block.id)}
-              class="h-4 px-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
-            >
-              <Trash2 class="w-3 h-3" />
-            </Button>
+
+            {showDeleteConfirm ? (
+              <div class="flex items-center gap-1 ml-1 bg-background/80 backdrop-blur-sm rounded-sm border border-border/50 px-1">
+                <span class="text-[10px] text-muted-foreground font-medium whitespace-nowrap">
+                  Sure?
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => deleteBlock(block.id)}
+                  class="h-3 px-1 text-destructive hover:bg-destructive/10 text-[10px] font-bold"
+                >
+                  Yes
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  class="h-3 px-1 text-muted-foreground hover:text-foreground text-[10px]"
+                >
+                  No
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                class="h-4 px-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
+              >
+                <Trash2 class="w-3 h-3" />
+              </Button>
+            )}
           </div>
         </div>
 
