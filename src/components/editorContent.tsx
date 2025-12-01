@@ -103,6 +103,7 @@ const EditorContent = ({
                 highlightActiveLineGutter: false,
                 highlightActiveLine: false,
                 foldGutter: false,
+                // lineWrapping: true,
               }}
               placeholder="Write something..."
               className="codemirror-editor"
