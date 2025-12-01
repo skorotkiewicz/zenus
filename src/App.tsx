@@ -7,7 +7,8 @@ import {
 } from "@hello-pangea/dnd";
 import { Snowflake } from "@skorotkiewicz/snowflake-id";
 import { invoke } from "@tauri-apps/api/core";
-import { Plus, Search } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Minus, Plus, Search, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "preact/hooks";
 import EditorContent from "@/components/editorContent";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -139,32 +140,72 @@ function App() {
     }
   };
 
+  const appWindow = getCurrentWindow();
+
   return (
-    <div className="h-screen w-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
+    <div className="h-screen w-screen bg-background text-foreground flex flex-col selection:bg-primary/20 border border-border/50 rounded-lg overflow-hidden">
       {/* App Title Bar */}
-      <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center space-x-3">
-          <h1 className="text-xl font-semibold tracking-tight">Zen Notes</h1>
+      <div className="sticky top-0 z-50 flex items-center h-10 px-4 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 select-none">
+        {/* Left Side - Draggable Title */}
+        <div data-tauri-drag-region className="flex items-center space-x-3 flex-shrink-0">
+          <div className="w-3 h-3 rounded-full bg-primary/20" />
+          <h1 className="text-sm font-semibold tracking-tight">Zenus</h1>
         </div>
-        <div className="flex items-center space-x-4">
+
+        {/* Flexible Spacer - Draggable */}
+        <div data-tauri-drag-region className="flex-1 h-full" />
+
+        {/* Right Side - Interactive Controls */}
+        <div className="flex items-center space-x-3 flex-shrink-0">
           <div className="relative w-64 hidden md:block">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="Search blocks..."
+              placeholder="Search..."
               value={searchTerm}
               onInput={(e) => setSearchTerm((e.target as HTMLInputElement).value)}
-              className="w-full pl-8 pr-3 py-1 text-sm bg-muted/50 border border-border/50 rounded-md focus:outline-none focus:ring-1 focus:ring-ring transition-colors"
+              className="w-full pl-8 pr-3 py-1 text-xs bg-muted/50 border border-border/50 rounded-md focus:outline-none focus:ring-1 focus:ring-ring transition-colors h-7"
             />
           </div>
-          <span className="text-sm text-muted-foreground font-medium whitespace-nowrap">
-            {filteredBlocks.length} {filteredBlocks.length === 1 ? "block" : "blocks"}
-          </span>
+
+          <div className="h-4 w-[1px] bg-border/50 mx-2" />
+
           <ModeToggle />
-          <Button onClick={addNewBlock} size="sm" className="shadow-sm">
-            <Plus className="w-4 h-4 mr-2" />
-            New Block
+
+          <Button onClick={addNewBlock} size="sm" className="h-7 text-xs shadow-sm px-2">
+            <Plus className="w-3 h-3 mr-1" />
+            New
           </Button>
+
+          <div className="h-4 w-[1px] bg-border/50 mx-2" />
+
+          {/* Window Actions */}
+          <div className="flex items-center space-x-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 hover:bg-muted"
+              onClick={() => appWindow.minimize()}
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 hover:bg-muted"
+              onClick={() => appWindow.toggleMaximize()}
+            >
+              <Square className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 hover:bg-destructive hover:text-destructive-foreground"
+              onClick={() => appWindow.close()}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </div>
 

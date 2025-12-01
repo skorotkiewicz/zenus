@@ -14,12 +14,15 @@
       {
         "title": "Zenus",
         "width": 1000,
-        "height": 680
+        "height": 680,
+        "decorations": false
       }
     ],
     "security": {
-      "csp": null
-    }
+      "csp": null,
+      "capabilities": ["window-operations"]
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": true,
