@@ -83,7 +83,7 @@ fn save_block_local(block: NoteBlock) -> Result<(), String> {
     let archive_dir = notes_dir.join("archive");
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
     
-    // Check if the note exists in archive, if so, save it there
+    // Check if the note exists in archive, if so, save it there //###//
     let archive_file_path = archive_dir.join(format!("{}.md", block.id));
     let file_path = if archive_file_path.exists() {
         archive_file_path
@@ -303,7 +303,7 @@ fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
     let archive_dir = notes_dir.join("archive");
     
     for (id, order) in orders {
-        // Check if the note exists in archive, if so, update it there
+        // Check if the note exists in archive, if so, update it there //###//
         let archive_file_path = archive_dir.join(format!("{}.md", id));
         let file_path = if archive_file_path.exists() {
             archive_file_path
