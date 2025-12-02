@@ -8,6 +8,7 @@ import { useState } from "preact/hooks";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import type { RenderBlockAsLines } from "@/types";
+import { wikiLinkPlugin } from "@/utils/wiki-link-extension";
 
 const EditorContent = ({
   block,
@@ -18,6 +19,7 @@ const EditorContent = ({
   updateBlockContent,
   toggleArchive,
   isArchived,
+  onNavigate,
 }: RenderBlockAsLines) => {
   const { theme } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -112,7 +114,7 @@ const EditorContent = ({
               key={`${block.id}-${theme}`}
               value={block.content}
               onChange={(value: string) => updateBlockContent(block.id, value)}
-              extensions={[markdown()]}
+              extensions={[markdown(), wikiLinkPlugin(onNavigate)]}
               // theme={theme === "dark" ? oneDark : xcodeLight}
               theme={theme === "dark" ? xcodeDark : xcodeLight}
               // theme={theme === "dark" ? githubDark : githubLight}

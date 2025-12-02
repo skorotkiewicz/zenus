@@ -27,5 +27,6 @@ export interface RenderBlockAsLines {
   updateBlockContent: (id: string, content: string) => void;
   toggleArchive: (id: string) => void;
   isArchived: boolean;
+  onNavigate: (title: string) => void;
   lines: string[];
 }

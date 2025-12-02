@@ -147,6 +147,26 @@ function App() {
     }
   };
 
+  const handleNavigate = (title: string) => {
+    const targetBlock = blocks.find(
+      (block) => block.title.trim().toLowerCase() === title.trim().toLowerCase(),
+    );
+
+    if (targetBlock) {
+      // Find the element and scroll to it
+      // Add data-block-id to the wrapper in the map loop
+      const element = document.querySelector(`[data-block-id="${targetBlock.id}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Highlight the block briefly
+        element.classList.add("ring-2", "ring-primary");
+        setTimeout(() => element.classList.remove("ring-2", "ring-primary"), 2000);
+      }
+    } else {
+      console.warn(`Note with title "${title}" not found.`);
+    }
+  };
+
   const toggleArchive = async (id: string) => {
     try {
       const command = showArchived ? "unarchive_block" : "archive_block";
@@ -332,6 +352,7 @@ function App() {
                             {...provided.draggableProps}
                             style={provided.draggableProps.style as any}
                             className="bg-card group hover:bg-muted/30 transition-colors duration-200"
+                            data-block-id={block.id}
                           >
                             <div className="flex">
                               {/* Drag Handle */}
@@ -371,6 +392,7 @@ function App() {
                                 updateBlockContent={updateBlockContent}
                                 toggleArchive={toggleArchive}
                                 isArchived={showArchived}
+                                onNavigate={handleNavigate}
                                 lines={block.content.split("\n")}
                               />
                             </div>
