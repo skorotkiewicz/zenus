@@ -44,7 +44,7 @@ const EditorContent = ({
             }}
             class="border-none bg-transparent text-sm font-medium text-foreground focus:outline-none flex-1 placeholder:text-muted-foreground/50 font-mono h-5 leading-5 transition-colors"
             placeholder="Block title..."
-            disabled={isArchived}
+            // disabled={isArchived}
           />
 
           <div class="flex items-center opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity duration-200 pr-4">
@@ -127,7 +127,7 @@ const EditorContent = ({
               }}
               placeholder="Write something..."
               className="codemirror-editor"
-              editable={!isArchived}
+              // editable={!isArchived}
             />
           </div>
         )}
