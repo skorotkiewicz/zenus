@@ -8,7 +8,7 @@ import {
 import { Snowflake } from "@skorotkiewicz/snowflake-id";
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { Minus, Plus, Search, Square, X } from "lucide-react";
+import { Archive, ArchiveRestore, Minus, Plus, Search, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "preact/hooks";
 import EditorContent from "@/components/editorContent";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -30,11 +30,13 @@ function App() {
     content: "",
     title: "",
   });
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [showArchived, setShowArchived] = useState(false);
 
-  // Load notes on app start
+  // Load notes on app start and when showArchived changes
   useEffect(() => {
     loadNotes();
-  }, []);
+  }, [showArchived]);
 
   const filteredBlocks = blocks.filter(
     (block) =>
@@ -44,7 +46,8 @@ function App() {
 
   const loadNotes = async () => {
     try {
-      const loadedBlocks = await invoke<NoteBlock[]>("load_notes");
+      const subdir = showArchived ? "archive" : null;
+      const loadedBlocks = await invoke<NoteBlock[]>("load_notes", { subdir });
       setBlocks(loadedBlocks);
     } catch (error) {
       console.error("Failed to load notes:", error);
@@ -52,10 +55,13 @@ function App() {
   };
 
   const saveBlock = async (block: NoteBlock) => {
+    // setSaveStatus("saving");
     try {
       await invoke("save_block", { block });
+      // setTimeout(() => setSaveStatus("idle"), 100);
     } catch (error) {
       console.error("Failed to save block:", error);
+      setSaveStatus("error");
     }
   };
 
@@ -133,10 +139,41 @@ function App() {
 
   const deleteBlock = async (id: string) => {
     try {
-      await invoke("delete_block", { blockId: id });
+      const subdir = showArchived ? "archive" : null;
+      await invoke("delete_block", { blockId: id, subdir });
       setBlocks(blocks.filter((block) => block.id !== id));
     } catch (error) {
       console.error("Failed to delete block:", error);
+    }
+  };
+
+  const handleNavigate = (title: string) => {
+    const targetBlock = blocks.find(
+      (block) => block.title.trim().toLowerCase() === title.trim().toLowerCase(),
+    );
+
+    if (targetBlock) {
+      // Find the element and scroll to it
+      // Add data-block-id to the wrapper in the map loop
+      const element = document.querySelector(`[data-block-id="${targetBlock.id}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Highlight the block briefly
+        element.classList.add("ring-2", "ring-primary");
+        setTimeout(() => element.classList.remove("ring-2", "ring-primary"), 2000);
+      }
+    } else {
+      console.warn(`Note with title "${title}" not found.`);
+    }
+  };
+
+  const toggleArchive = async (id: string) => {
+    try {
+      const command = showArchived ? "unarchive_block" : "archive_block";
+      await invoke(command, { blockId: id });
+      setBlocks(blocks.filter((block) => block.id !== id));
+    } catch (error) {
+      console.error("Failed to toggle archive:", error);
     }
   };
 
@@ -148,8 +185,15 @@ function App() {
       <div className="sticky top-0 z-50 flex items-center h-10 px-4 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 select-none">
         {/* Left Side - Draggable Title */}
         <div data-tauri-drag-region className="flex items-center space-x-3 flex-shrink-0">
-          <div className="w-3 h-3 rounded-full bg-primary/20" />
-          <h1 className="text-sm font-semibold tracking-tight">Zenus</h1>
+          <div
+            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+              saveStatus === "saving"
+                ? "bg-yellow-500 animate-pulse"
+                : saveStatus === "error"
+                  ? "bg-red-500"
+                  : "bg-primary/20" // idle state
+            }`}
+          />
         </div>
 
         {/* Flexible Spacer - Draggable */}
@@ -172,9 +216,29 @@ function App() {
 
           <ModeToggle />
 
-          <Button onClick={addNewBlock} size="sm" className="h-7 text-xs shadow-sm px-2">
+          <Button
+            onClick={addNewBlock}
+            size="sm"
+            className="h-7 text-xs shadow-sm px-2"
+            disabled={showArchived}
+          >
             <Plus className="w-3 h-3 mr-1" />
             New
+          </Button>
+
+          <Button
+            variant={showArchived ? "secondary" : "ghost"}
+            size="sm"
+            className="h-7 text-xs shadow-sm px-2"
+            onClick={() => setShowArchived(!showArchived)}
+            title={showArchived ? "Show Active Notes" : "Show Archived Notes"}
+          >
+            {showArchived ? (
+              <ArchiveRestore className="w-3 h-3 mr-1" />
+            ) : (
+              <Archive className="w-3 h-3 mr-1" />
+            )}
+            {showArchived ? "Archived" : "Archive"}
           </Button>
 
           <div className="h-4 w-[1px] bg-border/50 mx-2" />
@@ -212,23 +276,35 @@ function App() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
         {blocks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
-            <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-              <Plus className="w-10 h-10 text-muted-foreground" />
+          showArchived ? (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
+              <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                <Archive className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-2xl font-semibold tracking-tight mb-2">Archive is Empty</h3>
+              <p className="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
+                No archived notes found.
+              </p>
             </div>
-            <h3 className="text-2xl font-semibold tracking-tight mb-2">Welcome to Zen Notes</h3>
-            <p className="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
-              Your space for clarity and focus. Create your first block to get started.
-            </p>
-            <Button
-              onClick={addNewBlock}
-              size="lg"
-              className="shadow-md hover:shadow-lg transition-all"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Create First Block
-            </Button>
-          </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center px-6 animate-in fade-in zoom-in-95 duration-500">
+              <div className="w-24 h-24 bg-muted rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                <Plus className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-2xl font-semibold tracking-tight mb-2">Welcome to Zen Notes</h3>
+              <p className="text-muted-foreground mb-8 text-lg max-w-md leading-relaxed">
+                Your space for clarity and focus. Create your first block to get started.
+              </p>
+              <Button
+                onClick={addNewBlock}
+                size="lg"
+                className="shadow-md hover:shadow-lg transition-all"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Create First Block
+              </Button>
+            </div>
+          )
         ) : (
           <div>
             <DragDropContext
@@ -248,13 +324,16 @@ function App() {
                 setBlocks(updatedItems);
 
                 // Save new order to backend
+                // setSaveStatus("saving");
                 try {
                   const orders = updatedItems.map(
                     (item) => [item.id, item.order] as [string, number],
                   );
                   await invoke("update_orders", { orders });
+                  // setTimeout(() => setSaveStatus("idle"), 100);
                 } catch (error) {
                   console.error("Failed to update orders:", error);
+                  setSaveStatus("error");
                 }
               }}
             >
@@ -263,7 +342,7 @@ function App() {
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden divide-y divide-border/50"
+                    className="bg-card border border-border/50 shadow-sm overflow-hidden divide-y divide-border/50"
                   >
                     {filteredBlocks.map((block, index) => (
                       <Draggable key={block.id} draggableId={block.id} index={index}>
@@ -273,6 +352,7 @@ function App() {
                             {...provided.draggableProps}
                             style={provided.draggableProps.style as any}
                             className="bg-card group hover:bg-muted/30 transition-colors duration-200"
+                            data-block-id={block.id}
                           >
                             <div className="flex">
                               {/* Drag Handle */}
@@ -310,6 +390,9 @@ function App() {
                                 openPreviewModal={openPreviewModal}
                                 deleteBlock={deleteBlock}
                                 updateBlockContent={updateBlockContent}
+                                toggleArchive={toggleArchive}
+                                isArchived={showArchived}
+                                onNavigate={handleNavigate}
                                 lines={block.content.split("\n")}
                               />
                             </div>
