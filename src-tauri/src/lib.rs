@@ -80,9 +80,16 @@ async fn save_block(state: State<'_, AppState>, block: NoteBlock) -> Result<(), 
 fn save_block_local(block: NoteBlock) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
+    let archive_dir = notes_dir.join("archive");
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
     
-    let file_path = notes_dir.join(format!("{}.md", block.id));
+    // Check if the note exists in archive, if so, save it there
+    let archive_file_path = archive_dir.join(format!("{}.md", block.id));
+    let file_path = if archive_file_path.exists() {
+        archive_file_path
+    } else {
+        notes_dir.join(format!("{}.md", block.id))
+    };
     
     // Save metadata as JSON comment at the top
     let metadata = serde_json::to_string(&serde_json::json!({
@@ -293,9 +300,17 @@ async fn update_orders(state: State<'_, AppState>, orders: Vec<(String, i32)>) -
 fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
+    let archive_dir = notes_dir.join("archive");
     
     for (id, order) in orders {
-        let file_path = notes_dir.join(format!("{}.md", id));
+        // Check if the note exists in archive, if so, update it there
+        let archive_file_path = archive_dir.join(format!("{}.md", id));
+        let file_path = if archive_file_path.exists() {
+            archive_file_path
+        } else {
+            notes_dir.join(format!("{}.md", id))
+        };
+        
         if file_path.exists() {
             let content = fs::read_to_string(&file_path).map_err(|e| format!("Failed to read file: {}", e))?;
             let lines: Vec<&str> = content.lines().collect();
