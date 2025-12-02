@@ -10,6 +10,8 @@ A beautiful note-taking app built with Tauri, Preact, and Tailwind CSS. Features
 - **Markdown Preview**: Toggle between edit and preview modes with full markdown support
 - **Custom Titles**: Each block can have its own title
 - **Modern UI**: Clean, responsive design with dark mode support
+- **Archive System**: Keep your workspace clean by archiving old notes
+- **Wiki-style Linking**: Connect notes using `[[Note Title]]` syntax
 - **Cross-platform**: Built with Tauri for native performance
 
 ## Getting Started
@@ -64,6 +66,8 @@ Runs the GUI app but connects to a remote Zenus server instead of using local st
 - **Creating Notes**: Click "New Block, Click Me" to add a new note block
 - **Editing Titles**: Click on any block title to edit it
 - **Markdown Preview**: Click the "Preview" button to see rendered markdown
+- **Archiving**: Archive notes to clear clutter, and view them in the Archive tab
+- **Linking**: Type `[[Note Title]]` to link to other notes; click to navigate
 - **Writing Notes**: Use the textarea to write your notes in markdown format
 
 ## Recommended IDE Setup
