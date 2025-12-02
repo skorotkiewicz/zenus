@@ -149,7 +149,6 @@ function App() {
         {/* Left Side - Draggable Title */}
         <div data-tauri-drag-region className="flex items-center space-x-3 flex-shrink-0">
           <div className="w-3 h-3 rounded-full bg-primary/20" />
-          <h1 className="text-sm font-semibold tracking-tight">Zenus</h1>
         </div>
 
         {/* Flexible Spacer - Draggable */}
@@ -263,7 +262,7 @@ function App() {
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="bg-card border border-border/50 rounded-xl shadow-sm overflow-hidden divide-y divide-border/50"
+                    className="bg-card border border-border/50 shadow-sm overflow-hidden divide-y divide-border/50"
                   >
                     {filteredBlocks.map((block, index) => (
                       <Draggable key={block.id} draggableId={block.id} index={index}>

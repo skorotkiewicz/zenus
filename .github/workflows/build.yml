@@ -2,8 +2,9 @@ name: 'publish'
 
 on:
   push:
-    branches:
-      - main
+    tags: [ '*' ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   publish-tauri:
