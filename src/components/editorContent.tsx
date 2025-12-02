@@ -3,7 +3,7 @@ import { markdown } from "@codemirror/lang-markdown";
 // import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
 import { xcodeDark, xcodeLight } from "@uiw/codemirror-theme-xcode";
 import CodeMirror from "@uiw/react-codemirror";
-import { ChevronDown, ChevronRight, Eye, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ChevronDown, ChevronRight, Eye, Trash2 } from "lucide-react";
 import { useState } from "preact/hooks";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,6 +16,8 @@ const EditorContent = ({
   openPreviewModal,
   deleteBlock,
   updateBlockContent,
+  toggleArchive,
+  isArchived,
 }: RenderBlockAsLines) => {
   const { theme } = useTheme();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -40,6 +42,7 @@ const EditorContent = ({
             }}
             class="border-none bg-transparent text-sm font-medium text-foreground focus:outline-none flex-1 placeholder:text-muted-foreground/50 font-mono h-5 leading-5 transition-colors"
             placeholder="Block title..."
+            disabled={isArchived}
           />
 
           <div class="flex items-center opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity duration-200 pr-4">
@@ -51,6 +54,21 @@ const EditorContent = ({
             >
               <Eye class="w-3 h-3 mr-1" />
               Preview
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleArchive(block.id)}
+              class="h-4 px-1 text-muted-foreground hover:text-foreground text-xs hover:bg-muted"
+              title={isArchived ? "Unarchive" : "Archive"}
+            >
+              {isArchived ? (
+                <ArchiveRestore class="w-3 h-3 mr-1" />
+              ) : (
+                <Archive class="w-3 h-3 mr-1" />
+              )}
+              {isArchived ? "Unarchive" : "Archive"}
             </Button>
 
             {showDeleteConfirm ? (
@@ -107,6 +125,7 @@ const EditorContent = ({
               }}
               placeholder="Write something..."
               className="codemirror-editor"
+              editable={!isArchived}
             />
           </div>
         )}

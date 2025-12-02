@@ -100,10 +100,19 @@ fn save_block_local(block: NoteBlock) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn load_notes(state: State<'_, AppState>) -> Result<Vec<NoteBlock>, String> {
+async fn load_notes(state: State<'_, AppState>, subdir: Option<String>) -> Result<Vec<NoteBlock>, String> {
     if let Some(api_url) = &state.api_url {
         // Client Mode: Fetch from server
-        let url = format!("{}/notes", api_url);
+        let url = if let Some(sub) = &subdir {
+            if sub == "archive" {
+                format!("{}/notes/archive", api_url)
+            } else {
+                format!("{}/notes", api_url)
+            }
+        } else {
+            format!("{}/notes", api_url)
+        };
+
         let mut request = state.client.get(&url);
         
         if let Some(token) = &state.auth_token {
@@ -120,13 +129,17 @@ async fn load_notes(state: State<'_, AppState>) -> Result<Vec<NoteBlock>, String
         Ok(blocks)
     } else {
         // Local Mode: Read from disk
-        load_notes_local()
+        load_notes_local(subdir.as_deref())
     }
 }
 
-fn load_notes_local() -> Result<Vec<NoteBlock>, String> {
+fn load_notes_local(subdir: Option<&str>) -> Result<Vec<NoteBlock>, String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+    let mut notes_dir = app_dir.join("zenus");
+    
+    if let Some(sub) = subdir {
+        notes_dir = notes_dir.join(sub);
+    }
     
     if !notes_dir.exists() {
         return Ok(vec![]);
@@ -206,10 +219,19 @@ fn load_notes_local() -> Result<Vec<NoteBlock>, String> {
 }
 
 #[tauri::command]
-async fn delete_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
+async fn delete_block(state: State<'_, AppState>, block_id: String, subdir: Option<String>) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
         // Client Mode: Delete on server
-        let url = format!("{}/notes/{}", api_url, block_id);
+        let url = if let Some(sub) = &subdir {
+            if sub == "archive" {
+                format!("{}/notes/{}/archive", api_url, block_id)
+            } else {
+                format!("{}/notes/{}", api_url, block_id)
+            }
+        } else {
+            format!("{}/notes/{}", api_url, block_id)
+        };
+
         let mut request = state.client.delete(&url);
         
         if let Some(token) = &state.auth_token {
@@ -224,13 +246,18 @@ async fn delete_block(state: State<'_, AppState>, block_id: String) -> Result<()
         Ok(())
     } else {
         // Local Mode: Delete from disk
-        delete_block_local(block_id)
+        delete_block_local(block_id, subdir.as_deref())
     }
 }
 
-fn delete_block_local(block_id: String) -> Result<(), String> {
+fn delete_block_local(block_id: String, subdir: Option<&str>) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+    let mut notes_dir = app_dir.join("zenus");
+    
+    if let Some(sub) = subdir {
+        notes_dir = notes_dir.join(sub);
+    }
+    
     let file_path = notes_dir.join(format!("{}.md", block_id));
     
     if file_path.exists() {
@@ -295,6 +322,88 @@ fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
     Ok(())
 }
 
+
+#[tauri::command]
+async fn archive_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Archive on server
+        let url = format!("{}/notes/{}/archive", api_url, block_id);
+        let mut request = state.client.post(&url);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?;
+            
+        Ok(())
+    } else {
+        // Local Mode: Move to archive folder
+        archive_block_local(block_id)
+    }
+}
+
+fn archive_block_local(block_id: String) -> Result<(), String> {
+    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+    let notes_dir = app_dir.join("zenus");
+    let archive_dir = notes_dir.join("archive");
+    
+    fs::create_dir_all(&archive_dir).map_err(|e| format!("Failed to create archive directory: {}", e))?;
+    
+    let src_path = notes_dir.join(format!("{}.md", block_id));
+    let dest_path = archive_dir.join(format!("{}.md", block_id));
+    
+    if src_path.exists() {
+        fs::rename(&src_path, &dest_path).map_err(|e| format!("Failed to archive file: {}", e))?;
+    } else {
+        return Err("File not found".to_string());
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn unarchive_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
+    if let Some(api_url) = &state.api_url {
+        // Client Mode: Unarchive on server
+        let url = format!("{}/notes/{}/unarchive", api_url, block_id);
+        let mut request = state.client.post(&url);
+        
+        if let Some(token) = &state.auth_token {
+            request = request.header("Authorization", token);
+        }
+
+        request.send().await
+            .map_err(|e| format!("Failed to send request: {}", e))?
+            .error_for_status()
+            .map_err(|e| format!("Server error: {}", e))?;
+            
+        Ok(())
+    } else {
+        unarchive_block_local(block_id)
+    }
+}
+
+fn unarchive_block_local(block_id: String) -> Result<(), String> {
+    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+    let notes_dir = app_dir.join("zenus");
+    let archive_dir = notes_dir.join("archive");
+    
+    let src_path = archive_dir.join(format!("{}.md", block_id));
+    let dest_path = notes_dir.join(format!("{}.md", block_id));
+    
+    if src_path.exists() {
+        fs::rename(&src_path, &dest_path).map_err(|e| format!("Failed to unarchive file: {}", e))?;
+    } else {
+        return Err("Archived file not found".to_string());
+    }
+    
+    Ok(())
+}
+
 // Server implementation
 async fn run_server(host: String, port: u16, auth_token: Option<String>) {
     println!("Starting Zenus Server on {}:{}", host, port);
@@ -327,7 +436,10 @@ async fn run_server(host: String, port: u16, auth_token: Option<String>) {
 
     let app = Router::new()
         .route("/notes", get(api_get_notes).post(api_save_note))
+        .route("/notes/archive", get(api_get_archived_notes))
         .route("/notes/:id", delete(api_delete_note))
+        .route("/notes/:id/archive", post(api_archive_note).delete(api_delete_archived_note))
+        .route("/notes/:id/unarchive", post(api_unarchive_note))
         .route("/notes/reorder", post(api_reorder_notes))
         .layer(CorsLayer::permissive())
         .layer(axum::middleware::from_fn_with_state(
@@ -343,7 +455,7 @@ async fn run_server(host: String, port: u16, auth_token: Option<String>) {
 
 // API Handlers
 async fn api_get_notes() -> Json<Vec<NoteBlock>> {
-    match load_notes_local() {
+    match load_notes_local(None) {
         Ok(notes) => Json(notes),
         Err(_) => Json(vec![]),
     }
@@ -357,7 +469,14 @@ async fn api_save_note(Json(block): Json<NoteBlock>) -> StatusCode {
 }
 
 async fn api_delete_note(Path(id): Path<String>) -> StatusCode {
-    match delete_block_local(id) {
+    match delete_block_local(id, None) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn api_delete_archived_note(Path(id): Path<String>) -> StatusCode {
+    match delete_block_local(id, Some("archive")) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
@@ -365,6 +484,27 @@ async fn api_delete_note(Path(id): Path<String>) -> StatusCode {
 
 async fn api_reorder_notes(Json(orders): Json<Vec<(String, i32)>>) -> StatusCode {
     match update_orders_local(orders) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn api_get_archived_notes() -> Json<Vec<NoteBlock>> {
+    match load_notes_local(Some("archive")) {
+        Ok(notes) => Json(notes),
+        Err(_) => Json(vec![]),
+    }
+}
+
+async fn api_archive_note(Path(id): Path<String>) -> StatusCode {
+    match archive_block_local(id) {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+async fn api_unarchive_note(Path(id): Path<String>) -> StatusCode {
+    match unarchive_block_local(id) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
@@ -397,7 +537,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .manage(app_state)
-        .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block, update_orders])
+        .invoke_handler(tauri::generate_handler![greet, save_block, load_notes, delete_block, update_orders, archive_block, unarchive_block])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
