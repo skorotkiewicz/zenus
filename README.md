@@ -56,7 +56,7 @@ Runs as a standalone desktop app, saving notes to the local file system (`~/.loc
 ### 2. Server Mode (Headless)
 Runs as a CLI-only API server without the GUI. Useful for hosting your notes on a server.
 ```bash
-./zenus --host 0.0.0.0 --port 8888 --auth pass123ord --path /server/notes/data
+./zenus-headless --host 0.0.0.0 --port 8888 --auth pass123ord --path /server/notes/data
 ```
 
 ### 3. Client Mode (Remote)
