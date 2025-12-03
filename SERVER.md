@@ -1,27 +1,27 @@
-# Building and Running the Headless Server
+# Building and Running the Headless Binary
 
-The Zenus server can be built as a lightweight, headless binary without GUI dependencies.
+The Zenus headless binary can be built as a lightweight, headless binary without GUI dependencies.
 
-## Building the Server Binary
+## Building the Headless Binary
 
 ```bash
 cd src-tauri
-cargo build --release --bin zenus-server --no-default-features
+cargo build --release --bin zenus-headless --no-default-features
 ```
 
-The binary will be located at: `src-tauri/target/release/zenus-server`
+The binary will be located at: `src-tauri/target/release/zenus-headless`
 
-## Running the Server
+## Running the Headless Binary
 
 ```bash
 # Run on default host/port (0.0.0.0:8888)
-./zenus-server
+./zenus-headless
 
 # Specify custom host and port
-./zenus-server --host 0.0.0.0 --port 5555
+./zenus-headless --host 0.0.0.0 --port 5555
 
 # Enable authentication
-./zenus-server --host 0.0.0.0 --port 5555 --auth mypassword
+./zenus-headless --host 0.0.0.0 --port 5555 --auth mypassword
 ```
 
 ## Benefits
