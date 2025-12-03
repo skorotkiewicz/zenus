@@ -25,10 +25,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
+      # - name: setup node
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: lts/*
 
       - name: setup bun
         uses: oven-sh/setup-bun@v2
@@ -46,6 +46,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
       - name: install frontend dependencies
         run: bun install
 
@@ -53,9 +58,53 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: app-v__VERSION__
-          releaseName: 'App v__VERSION__'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Zenus ${{ github.ref_name }}'
           releaseBody: 'See the assets to download this version and install.'
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Build and Package Headless
+        shell: bash
+        run: |
+          cd src-tauri
+          
+          # Determine target and suffix
+          ARGS="${{ matrix.args }}"
+          if [ -n "$ARGS" ]; then
+             TARGET=$(echo $ARGS | sed 's/--target //')
+             BIN_DIR="target/$TARGET/release"
+             SUFFIX="-$TARGET"
+          else
+             TARGET=""
+             BIN_DIR="target/release"
+             if [ "${{ runner.os }}" = "Windows" ]; then
+               SUFFIX="-x86_64-pc-windows-msvc"
+             elif [ "${{ runner.os }}" = "Linux" ]; then
+               SUFFIX="-x86_64-unknown-linux-gnu"
+             else
+               SUFFIX="-${{ matrix.platform }}"
+             fi
+          fi
+          
+          echo "Building headless for target: ${TARGET:-default}"
+          cargo build --release --bin zenus-headless --no-default-features $ARGS
+          
+          # Handle extension
+          EXT=""
+          [ "${{ runner.os }}" = "Windows" ] && EXT=".exe"
+          
+          SRC="$BIN_DIR/zenus-headless$EXT"
+          DST="../zenus-headless$SUFFIX$EXT"
+          
+          echo "Copying $SRC to $DST"
+          cp "$SRC" "$DST"
+
+      - name: Upload Headless Binary
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: zenus-headless*

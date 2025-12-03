@@ -16,7 +16,7 @@ name = "zenus_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "zenus-server"
+name = "zenus-headless"
 path = "src/server.rs"
 
 [build-dependencies]
