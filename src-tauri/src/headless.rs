@@ -15,11 +15,15 @@ struct Args {
     /// Authentication token/password
     #[arg(long)]
     auth: Option<String>,
+
+    /// Custom path for notes directory
+    #[arg(long)]
+    path: Option<String>,
 }
 
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
 
-    run_server(args.host, args.port, args.auth).await;
+    run_server(args.host, args.port, args.auth, args.path).await;
 }

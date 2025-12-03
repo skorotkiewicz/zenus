@@ -30,12 +30,23 @@ struct Args {
     /// Authentication token/password
     #[arg(long)]
     auth: Option<String>,
+
+    /// Custom path for notes directory
+    #[arg(long)]
+    path: Option<String>,
 }
 
 struct AppState {
     api_url: Option<String>,
     auth_token: Option<String>,
     client: reqwest::Client,
+    local_path: Option<std::path::PathBuf>,
+}
+
+#[derive(Clone)]
+pub struct ServerState {
+    pub auth_token: Option<String>,
+    pub local_path: Option<std::path::PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -76,13 +87,17 @@ async fn save_block(state: State<'_, AppState>, block: NoteBlock) -> Result<(), 
         Ok(())
     } else {
         // Local Mode: Save to disk
-        save_block_local(block)
+        save_block_local(block, state.local_path.as_deref())
     }
 }
 
-pub fn save_block_local(block: NoteBlock) -> Result<(), String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+pub fn save_block_local(block: NoteBlock, custom_path: Option<&std::path::Path>) -> Result<(), String> {
+    let notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     let archive_dir = notes_dir.join("archive");
     fs::create_dir_all(&notes_dir).map_err(|e| format!("Failed to create directory: {}", e))?;
     
@@ -140,13 +155,17 @@ async fn load_notes(state: State<'_, AppState>, subdir: Option<String>) -> Resul
         Ok(blocks)
     } else {
         // Local Mode: Read from disk
-        load_notes_local(subdir.as_deref())
+        load_notes_local(subdir.as_deref(), state.local_path.as_deref())
     }
 }
 
-pub fn load_notes_local(subdir: Option<&str>) -> Result<Vec<NoteBlock>, String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let mut notes_dir = app_dir.join("zenus");
+pub fn load_notes_local(subdir: Option<&str>, custom_path: Option<&std::path::Path>) -> Result<Vec<NoteBlock>, String> {
+    let mut notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     
     if let Some(sub) = subdir {
         notes_dir = notes_dir.join(sub);
@@ -258,13 +277,17 @@ async fn delete_block(state: State<'_, AppState>, block_id: String, subdir: Opti
         Ok(())
     } else {
         // Local Mode: Delete from disk
-        delete_block_local(block_id, subdir.as_deref())
+        delete_block_local(block_id, subdir.as_deref(), state.local_path.as_deref())
     }
 }
 
-pub fn delete_block_local(block_id: String, subdir: Option<&str>) -> Result<(), String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let mut notes_dir = app_dir.join("zenus");
+pub fn delete_block_local(block_id: String, subdir: Option<&str>, custom_path: Option<&std::path::Path>) -> Result<(), String> {
+    let mut notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     
     if let Some(sub) = subdir {
         notes_dir = notes_dir.join(sub);
@@ -299,13 +322,17 @@ async fn update_orders(state: State<'_, AppState>, orders: Vec<(String, i32)>) -
         Ok(())
     } else {
         // Local Mode: Update on disk
-        update_orders_local(orders)
+        update_orders_local(orders, state.local_path.as_deref())
     }
 }
 
-pub fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+pub fn update_orders_local(orders: Vec<(String, i32)>, custom_path: Option<&std::path::Path>) -> Result<(), String> {
+    let notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     let archive_dir = notes_dir.join("archive");
     
     for (id, order) in orders {
@@ -364,13 +391,17 @@ async fn archive_block(state: State<'_, AppState>, block_id: String) -> Result<(
         Ok(())
     } else {
         // Local Mode: Move to archive folder
-        archive_block_local(block_id)
+        archive_block_local(block_id, state.local_path.as_deref())
     }
 }
 
-pub fn archive_block_local(block_id: String) -> Result<(), String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+pub fn archive_block_local(block_id: String, custom_path: Option<&std::path::Path>) -> Result<(), String> {
+    let notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     let archive_dir = notes_dir.join("archive");
     
     fs::create_dir_all(&archive_dir).map_err(|e| format!("Failed to create archive directory: {}", e))?;
@@ -406,13 +437,17 @@ async fn unarchive_block(state: State<'_, AppState>, block_id: String) -> Result
             
         Ok(())
     } else {
-        unarchive_block_local(block_id)
+        unarchive_block_local(block_id, state.local_path.as_deref())
     }
 }
 
-pub fn unarchive_block_local(block_id: String) -> Result<(), String> {
-    let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
-    let notes_dir = app_dir.join("zenus");
+pub fn unarchive_block_local(block_id: String, custom_path: Option<&std::path::Path>) -> Result<(), String> {
+    let notes_dir = if let Some(p) = custom_path {
+        p.to_path_buf()
+    } else {
+        let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
+        app_dir.join("zenus")
+    };
     let archive_dir = notes_dir.join("archive");
     
     let src_path = archive_dir.join(format!("{}.md", block_id));
@@ -428,15 +463,13 @@ pub fn unarchive_block_local(block_id: String) -> Result<(), String> {
 }
 
 // Server implementation
-pub async fn run_server(host: String, port: u16, auth_token: Option<String>) {
+pub async fn run_server(host: String, port: u16, auth_token: Option<String>, local_path: Option<String>) {
     println!("Starting Zenus Server on {}:{}", host, port);
     if auth_token.is_some() {
         println!("Authentication enabled");
     }
-
-    #[derive(Clone)]
-    struct ServerState {
-        auth_token: Option<String>,
+    if let Some(path) = &local_path {
+        println!("Using custom notes directory: {}", path);
     }
 
     // Middleware to check auth
@@ -466,10 +499,16 @@ pub async fn run_server(host: String, port: u16, auth_token: Option<String>) {
         .route("/notes/reorder", post(api_reorder_notes))
         .layer(CorsLayer::permissive())
         .layer(axum::middleware::from_fn_with_state(
-            ServerState { auth_token: auth_token.clone() },
+            ServerState { 
+                auth_token: auth_token.clone(),
+                local_path: local_path.clone().map(std::path::PathBuf::from),
+            },
             auth_middleware
         ))
-        .with_state(ServerState { auth_token });
+        .with_state(ServerState { 
+            auth_token,
+            local_path: local_path.map(std::path::PathBuf::from),
+        });
 
     let addr: SocketAddr = format!("{}:{}", host, port).parse().expect("Invalid address");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -477,57 +516,75 @@ pub async fn run_server(host: String, port: u16, auth_token: Option<String>) {
 }
 
 // API Handlers
-async fn api_get_notes() -> Json<Vec<NoteBlock>> {
-    match load_notes_local(None) {
+async fn api_get_notes(AxumState(state): AxumState<ServerState>) -> Json<Vec<NoteBlock>> {
+    match load_notes_local(None, state.local_path.as_deref()) {
         Ok(notes) => Json(notes),
         Err(_) => Json(vec![]),
     }
 }
 
-async fn api_save_note(Json(block): Json<NoteBlock>) -> StatusCode {
-    match save_block_local(block) {
+async fn api_save_note(
+    AxumState(state): AxumState<ServerState>,
+    Json(block): Json<NoteBlock>
+) -> StatusCode {
+    match save_block_local(block, state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-async fn api_delete_note(Path(id): Path<String>) -> StatusCode {
-    match delete_block_local(id, None) {
+async fn api_delete_note(
+    AxumState(state): AxumState<ServerState>,
+    Path(id): Path<String>
+) -> StatusCode {
+    match delete_block_local(id, None, state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-async fn api_delete_archived_note(Path(id): Path<String>) -> StatusCode {
-    match delete_block_local(id, Some("archive")) {
+async fn api_delete_archived_note(
+    AxumState(state): AxumState<ServerState>,
+    Path(id): Path<String>
+) -> StatusCode {
+    match delete_block_local(id, Some("archive"), state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-async fn api_reorder_notes(Json(orders): Json<Vec<(String, i32)>>) -> StatusCode {
-    match update_orders_local(orders) {
+async fn api_reorder_notes(
+    AxumState(state): AxumState<ServerState>,
+    Json(orders): Json<Vec<(String, i32)>>
+) -> StatusCode {
+    match update_orders_local(orders, state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-async fn api_get_archived_notes() -> Json<Vec<NoteBlock>> {
-    match load_notes_local(Some("archive")) {
+async fn api_get_archived_notes(AxumState(state): AxumState<ServerState>) -> Json<Vec<NoteBlock>> {
+    match load_notes_local(Some("archive"), state.local_path.as_deref()) {
         Ok(notes) => Json(notes),
         Err(_) => Json(vec![]),
     }
 }
 
-async fn api_archive_note(Path(id): Path<String>) -> StatusCode {
-    match archive_block_local(id) {
+async fn api_archive_note(
+    AxumState(state): AxumState<ServerState>,
+    Path(id): Path<String>
+) -> StatusCode {
+    match archive_block_local(id, state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
-async fn api_unarchive_note(Path(id): Path<String>) -> StatusCode {
-    match unarchive_block_local(id) {
+async fn api_unarchive_note(
+    AxumState(state): AxumState<ServerState>,
+    Path(id): Path<String>
+) -> StatusCode {
+    match unarchive_block_local(id, state.local_path.as_deref()) {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
@@ -547,7 +604,7 @@ pub fn run() {
     // Server Mode
     if let Some(host) = args.host {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(run_server(host, args.port, args.auth));
+        rt.block_on(run_server(host, args.port, args.auth, args.path));
         return;
     }
 
@@ -556,6 +613,7 @@ pub fn run() {
         api_url: args.url,
         auth_token: args.auth,
         client: reqwest::Client::new(),
+        local_path: args.path.map(std::path::PathBuf::from),
     };
 
     tauri::Builder::default()
