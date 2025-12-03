@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
+#[cfg(feature = "tauri-deps")]
 use tauri::State;
 use clap::Parser;
 use axum::{
@@ -38,7 +39,7 @@ struct AppState {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-struct NoteBlock {
+pub struct NoteBlock {
     id: String,
     title: String,
     content: String,
@@ -49,11 +50,13 @@ struct NoteBlock {
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn save_block(state: State<'_, AppState>, block: NoteBlock) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
@@ -77,7 +80,7 @@ async fn save_block(state: State<'_, AppState>, block: NoteBlock) -> Result<(), 
     }
 }
 
-fn save_block_local(block: NoteBlock) -> Result<(), String> {
+pub fn save_block_local(block: NoteBlock) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     let archive_dir = notes_dir.join("archive");
@@ -106,6 +109,7 @@ fn save_block_local(block: NoteBlock) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn load_notes(state: State<'_, AppState>, subdir: Option<String>) -> Result<Vec<NoteBlock>, String> {
     if let Some(api_url) = &state.api_url {
@@ -140,7 +144,7 @@ async fn load_notes(state: State<'_, AppState>, subdir: Option<String>) -> Resul
     }
 }
 
-fn load_notes_local(subdir: Option<&str>) -> Result<Vec<NoteBlock>, String> {
+pub fn load_notes_local(subdir: Option<&str>) -> Result<Vec<NoteBlock>, String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let mut notes_dir = app_dir.join("zenus");
     
@@ -225,6 +229,7 @@ fn load_notes_local(subdir: Option<&str>) -> Result<Vec<NoteBlock>, String> {
     Ok(blocks)
 }
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn delete_block(state: State<'_, AppState>, block_id: String, subdir: Option<String>) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
@@ -257,7 +262,7 @@ async fn delete_block(state: State<'_, AppState>, block_id: String, subdir: Opti
     }
 }
 
-fn delete_block_local(block_id: String, subdir: Option<&str>) -> Result<(), String> {
+pub fn delete_block_local(block_id: String, subdir: Option<&str>) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let mut notes_dir = app_dir.join("zenus");
     
@@ -274,6 +279,7 @@ fn delete_block_local(block_id: String, subdir: Option<&str>) -> Result<(), Stri
     Ok(())
 }
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn update_orders(state: State<'_, AppState>, orders: Vec<(String, i32)>) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
@@ -297,7 +303,7 @@ async fn update_orders(state: State<'_, AppState>, orders: Vec<(String, i32)>) -
     }
 }
 
-fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
+pub fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     let archive_dir = notes_dir.join("archive");
@@ -338,6 +344,7 @@ fn update_orders_local(orders: Vec<(String, i32)>) -> Result<(), String> {
 }
 
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn archive_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
@@ -361,7 +368,7 @@ async fn archive_block(state: State<'_, AppState>, block_id: String) -> Result<(
     }
 }
 
-fn archive_block_local(block_id: String) -> Result<(), String> {
+pub fn archive_block_local(block_id: String) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     let archive_dir = notes_dir.join("archive");
@@ -380,6 +387,7 @@ fn archive_block_local(block_id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(feature = "tauri-deps")]
 #[tauri::command]
 async fn unarchive_block(state: State<'_, AppState>, block_id: String) -> Result<(), String> {
     if let Some(api_url) = &state.api_url {
@@ -402,7 +410,7 @@ async fn unarchive_block(state: State<'_, AppState>, block_id: String) -> Result
     }
 }
 
-fn unarchive_block_local(block_id: String) -> Result<(), String> {
+pub fn unarchive_block_local(block_id: String) -> Result<(), String> {
     let app_dir = dirs::data_dir().ok_or("Could not get data directory")?;
     let notes_dir = app_dir.join("zenus");
     let archive_dir = notes_dir.join("archive");
@@ -420,7 +428,7 @@ fn unarchive_block_local(block_id: String) -> Result<(), String> {
 }
 
 // Server implementation
-async fn run_server(host: String, port: u16, auth_token: Option<String>) {
+pub async fn run_server(host: String, port: u16, auth_token: Option<String>) {
     println!("Starting Zenus Server on {}:{}", host, port);
     if auth_token.is_some() {
         println!("Authentication enabled");
@@ -525,6 +533,7 @@ async fn api_unarchive_note(Path(id): Path<String>) -> StatusCode {
     }
 }
 
+#[cfg(feature = "tauri-deps")]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let args = Args::parse();
