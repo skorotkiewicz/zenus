@@ -601,6 +601,12 @@ pub fn run() {
         std::process::exit(1);
     }
 
+    // Validation: Cannot have both url (Client) and path (Local)
+    if args.url.is_some() && args.path.is_some() {
+        eprintln!("Error: Cannot run in both Client Mode (--url) and Local Mode (--path) at the same time.");
+        std::process::exit(1);
+    }
+
     // Server Mode
     if let Some(host) = args.host {
         let rt = tokio::runtime::Runtime::new().unwrap();
