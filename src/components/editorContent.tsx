@@ -36,6 +36,29 @@ const EditorContent = ({
           >
             {block.isCollapsed ? <ChevronRight class="w-3 h-3" /> : <ChevronDown class="w-3 h-3" />}
           </Button>
+
+          {/* Task Progress Indicator */}
+          {(() => {
+            const totalTasks = (block.content.match(/- \[[ x]\]/g) || []).length;
+            const completedTasks = (block.content.match(/- \[x\]/g) || []).length;
+
+            if (totalTasks > 0) {
+              return (
+                <div
+                  class={`mr-2 text-[10px] font-mono px-1 rounded-sm border ${
+                    completedTasks === totalTasks
+                      ? "bg-green-500/10 text-green-600 border-green-500/20"
+                      : "bg-muted text-muted-foreground border-border"
+                  }`}
+                  title={`${completedTasks} of ${totalTasks} tasks completed`}
+                >
+                  {completedTasks}/{totalTasks}
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           <input
             value={block.title}
             onInput={async (e) => {
