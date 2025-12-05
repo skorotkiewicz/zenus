@@ -58,6 +58,8 @@ pub struct NoteBlock {
     is_collapsed: bool,
     #[serde(default)]
     order: i32,
+    #[serde(default)]
+    tags: Vec<String>,
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
@@ -114,6 +116,7 @@ pub fn save_block_local(block: NoteBlock, custom_path: Option<&std::path::Path>)
         "title": block.title,
         "isCollapsed": block.is_collapsed,
         "order": block.order,
+        "tags": block.tags,
         "createdAt": chrono::Utc::now().to_rfc3339(),
         "updatedAt": chrono::Utc::now().to_rfc3339()
     })).map_err(|e| format!("Failed to serialize metadata: {}", e))?;
@@ -197,6 +200,7 @@ pub fn load_notes_local(subdir: Option<&str>, custom_path: Option<&std::path::Pa
             let mut is_collapsed = false;
             let mut title = "Untitled".to_string();
             let mut order = 0;
+            let mut tags: Vec<String> = Vec::new();
             let mut content_start = 0;
             
             if lines.len() > 0 && lines[0].starts_with("<!-- ") && lines[0].ends_with(" -->") {
@@ -211,6 +215,9 @@ pub fn load_notes_local(subdir: Option<&str>, custom_path: Option<&std::path::Pa
                     }
                     if let Some(order_val) = metadata.get("order").and_then(|v| v.as_i64()) {
                         order = order_val as i32;
+                    }
+                    if let Some(tags_arr) = metadata.get("tags").and_then(|v| v.as_array()) {
+                        tags = tags_arr.iter().filter_map(|v| v.as_str().map(String::from)).collect();
                     }
                 }
                 content_start = 1; // Skip metadata line
@@ -233,6 +240,7 @@ pub fn load_notes_local(subdir: Option<&str>, custom_path: Option<&std::path::Pa
                 content: block_content,
                 is_collapsed,
                 order,
+                tags,
             });
         }
     }

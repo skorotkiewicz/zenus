@@ -4,6 +4,7 @@ export interface NoteBlock {
   content: string;
   isCollapsed: boolean;
   order: number;
+  tags: string[];
 }
 
 export interface PreviewModalProps {
@@ -16,6 +17,7 @@ export interface NewBlock {
   title: string;
   content: string;
   isCollapsed: boolean;
+  tags: string[];
 }
 
 export interface RenderBlockAsLines {
@@ -26,6 +28,7 @@ export interface RenderBlockAsLines {
   deleteBlock: (id: string) => void;
   updateBlockContent: (id: string, content: string) => void;
   toggleArchive: (id: string) => void;
+  updateBlockTags: (id: string, tags: string[]) => void;
   isArchived: boolean;
   onNavigate: (title: string) => void;
   lines: string[];

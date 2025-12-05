@@ -11,6 +11,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Archive, ArchiveRestore, Minus, Plus, Search, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "preact/hooks";
 import EditorContent from "@/components/editorContent";
+// import { FileMenu } from "@/components/file-menu";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
 import PreviewModal from "./components/previewModal";
@@ -41,7 +42,8 @@ function App() {
   const filteredBlocks = blocks.filter(
     (block) =>
       block.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      block.content.toLowerCase().includes(searchTerm.toLowerCase()),
+      block.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      block.tags?.some((tag) => tag.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   const loadNotes = async () => {
@@ -74,6 +76,7 @@ function App() {
         content: "",
         isCollapsed: false,
         order: blocks.length,
+        tags: [],
       };
       setBlocks([...blocks, newBlock]);
       await saveBlock(newBlock);
@@ -101,6 +104,15 @@ function App() {
 
   const updateBlockContent = async (id: string, content: string) => {
     const updatedBlocks = blocks.map((block) => (block.id === id ? { ...block, content } : block));
+    setBlocks(updatedBlocks);
+    const updatedBlock = updatedBlocks.find((block) => block.id === id);
+    if (updatedBlock) {
+      await saveBlock(updatedBlock);
+    }
+  };
+
+  const updateBlockTags = async (id: string, tags: string[]) => {
+    const updatedBlocks = blocks.map((block) => (block.id === id ? { ...block, tags } : block));
     setBlocks(updatedBlocks);
     const updatedBlock = updatedBlocks.find((block) => block.id === id);
     if (updatedBlock) {
@@ -194,6 +206,7 @@ function App() {
                   : "bg-primary/20" // idle state
             }`}
           />
+          {/* <FileMenu addNewBlock={addNewBlock} /> */}
         </div>
 
         {/* Flexible Spacer - Draggable */}
@@ -368,7 +381,9 @@ function App() {
                               {/* Drag Handle */}
                               <div
                                 {...(provided.dragHandleProps as any)}
-                                className="cursor-grab active:cursor-grabbing flex-shrink-0 bg-muted/30 px-3 py-2 text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[30px] select-none flex items-center justify-center"
+                                className={`cursor-grab active:cursor-grabbing flex-shrink-0 bg-muted/30 px-3 py-1 text-sm text-muted-foreground/60 font-mono border-r border-border/50 min-w-[30px] select-none flex justify-center ${
+                                  block.isCollapsed ? "items-center" : "items-start"
+                                }`}
                                 title="Drag to reorder"
                               >
                                 <svg
@@ -401,6 +416,7 @@ function App() {
                                 deleteBlock={deleteBlock}
                                 updateBlockContent={updateBlockContent}
                                 toggleArchive={toggleArchive}
+                                updateBlockTags={updateBlockTags}
                                 isArchived={showArchived}
                                 onNavigate={handleNavigate}
                                 lines={block.content.split("\n")}
