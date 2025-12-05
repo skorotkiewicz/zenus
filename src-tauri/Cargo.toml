@@ -1,6 +1,6 @@
 [package]
 name = "zenus"
-version = "0.2.5"
+version = "0.2.6"
 description = "A beautiful note-taking app"
 authors = ["you"]
 edition = "2021"
