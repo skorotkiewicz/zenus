@@ -170,7 +170,7 @@ const EditorContent = ({
                 }}
                 autoFocus
                 className="w-24 h-5 text-xs bg-background border border-input rounded-sm px-1.5 focus:outline-none placeholder:text-muted-foreground/50 shadow-sm transition-all"
-                placeholder="New tag..."
+                placeholder="New label..."
               />
             </div>
           ) : (
@@ -178,10 +178,10 @@ const EditorContent = ({
               variant="ghost"
               size="sm"
               onClick={() => setIsAddingTag(true)}
-              className="h-4 w-4 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity"
-              title="Add tag"
+              className="ml-3 h-4 w-4 p-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 group-hover/line:opacity-100 transition-opacity"
+              title="Add label"
             >
-              <Hash className="w-3 h-3" />
+              <Hash className="w-3 h-3 mr-1" />
             </Button>
           )}
         </div>
